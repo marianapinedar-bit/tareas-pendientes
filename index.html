@@ -1,476 +1,286 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-    <meta charset="UTF-8">
-    <title>Tablero de tareas</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+<meta charset="UTF-8">
+<title>Tablero de tareas</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
-        :root {
-            --bg-1: #0b0e1a;
-            --bg-2: #12172b;
-            --surface: rgba(255, 255, 255, 0.045);
-            --surface-hover: rgba(255, 255, 255, 0.075);
-            --border: rgba(255, 255, 255, 0.09);
-            --text: #eef1fb;
-            --text-dim: #9099b8;
-            --blue: #4f8cff;
-            --violet: #9f7bff;
-            --mint: #3ddc97;
-            --amber: #ffb454;
-            --rust: #ff6b6b;
-        }
+  :root{
+    --bg-1:#0b0e1a;
+    --bg-2:#12172b;
+    --surface: rgba(255,255,255,0.045);
+    --surface-hover: rgba(255,255,255,0.075);
+    --border: rgba(255,255,255,0.09);
+    --text: #eef1fb;
+    --text-dim: #9099b8;
+    --blue:#4f8cff;
+    --violet:#9f7bff;
+    --mint:#3ddc97;
+    --amber:#ffb454;
+    --rust:#ff6b6b;
+  }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Inter', sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(circle at 15% 10%, rgba(79,140,255,0.16), transparent 45%),
+      radial-gradient(circle at 85% 25%, rgba(159,123,255,0.14), transparent 45%),
+      radial-gradient(circle at 50% 90%, rgba(61,220,151,0.08), transparent 50%),
+      linear-gradient(180deg, var(--bg-1), var(--bg-2));
+    background-attachment:fixed;
+    min-height:100vh;
+    padding:36px 24px 70px;
+  }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            color: var(--text);
-            background:
-                radial-gradient(circle at 15% 10%, rgba(79, 140, 255, 0.16), transparent 45%),
-                radial-gradient(circle at 85% 25%, rgba(159, 123, 255, 0.14), transparent 45%),
-                radial-gradient(circle at 50% 90%, rgba(61, 220, 151, 0.08), transparent 50%),
-                linear-gradient(180deg, var(--bg-1), var(--bg-2));
-            background-attachment: fixed;
-            min-height: 100vh;
-            padding: 36px 24px 70px;
-        }
+  .glow-orb{
+    position:fixed; width:480px; height:480px; border-radius:50%;
+    filter:blur(90px); opacity:0.16; z-index:0; pointer-events:none;
+    animation:drift 18s ease-in-out infinite alternate;
+  }
+  .glow-orb.a{ background:var(--blue); top:-140px; left:-140px; }
+  .glow-orb.b{ background:var(--violet); bottom:-160px; right:-120px; animation-delay:-6s; }
+  @keyframes drift{ 0%{transform:translate(0,0);} 100%{transform:translate(40px,30px);} }
 
-        .glow-orb {
-            position: fixed;
-            width: 480px;
-            height: 480px;
-            border-radius: 50%;
-            filter: blur(90px);
-            opacity: 0.16;
-            z-index: 0;
-            pointer-events: none;
-            animation: drift 18s ease-in-out infinite alternate;
-        }
+  header, .composer, .status-line, .board{ position:relative; z-index:1; }
 
-        .glow-orb.a {
-            background: var(--blue);
-            top: -140px;
-            left: -140px;
-        }
+  header{ max-width:720px; margin:0 auto 22px; }
+  header h1{
+    font-family:'Sora', sans-serif; font-weight:700; font-size:1.9rem; letter-spacing:-0.01em;
+    background:linear-gradient(90deg, #ffffff, #b9c4ee 70%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
 
-        .glow-orb.b {
-            background: var(--violet);
-            bottom: -160px;
-            right: -120px;
-            animation-delay: -6s;
-        }
+  .composer{
+    max-width:720px; margin:0 auto 20px;
+    background:var(--surface); backdrop-filter:blur(14px);
+    border:1px solid var(--border); border-radius:16px;
+    padding:18px;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .composer .full{ grid-column:1 / -1; }
+  .composer label{
+    display:block; font-family:'JetBrains Mono', monospace; font-size:0.66rem;
+    letter-spacing:0.06em; text-transform:uppercase; color:var(--text-dim); margin-bottom:5px;
+  }
+  .composer input, .composer select, .composer textarea{
+    width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:9px;
+    background:rgba(255,255,255,0.03); color:var(--text);
+    font-family:'Inter', sans-serif; font-size:0.85rem;
+  }
+  .composer select option{ background:#161c30; color:var(--text); }
+  .composer textarea{ resize:vertical; min-height:52px; font-family:'Inter', sans-serif; }
+  .composer input:focus, .composer select:focus, .composer textarea:focus{
+    outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(79,140,255,0.18);
+  }
+  .composer select{ appearance:none; cursor:pointer; }
+  .composer button{
+    grid-column:1 / -1;
+    padding:12px; border:none; border-radius:9px; margin-top:4px;
+    background:linear-gradient(90deg, var(--blue), var(--violet));
+    color:#fff; font-family:'Sora', sans-serif; font-weight:600; font-size:0.85rem;
+    cursor:pointer; transition:transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .composer button:hover{ transform:translateY(-1px); box-shadow:0 6px 18px rgba(79,140,255,0.35); }
 
-        @keyframes drift {
-            0% {
-                transform: translate(0, 0);
-            }
+  .status-line{
+    max-width:720px; margin:0 auto 20px;
+    font-family:'JetBrains Mono', monospace; font-size:0.72rem; color:var(--text-dim);
+    display:flex; justify-content:space-between;
+  }
 
-            100% {
-                transform: translate(40px, 30px);
-            }
-        }
+  .board{ max-width:720px; margin:0 auto; display:flex; flex-direction:column; gap:18px; }
 
-        header,
-        .composer,
-        .status-line,
-        .board {
-            position: relative;
-            z-index: 1;
-        }
+  .column{
+    background:var(--surface); backdrop-filter:blur(14px);
+    border:1px solid var(--border); border-radius:16px; padding:18px;
+  }
 
-        header {
-            max-width: 720px;
-            margin: 0 auto 22px;
-        }
+  .subject-head{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    gap:10px; margin-bottom:14px; padding-bottom:14px;
+    border-bottom:1px solid var(--border);
+  }
+  .subject-head h2{
+    font-family:'Sora', sans-serif; font-weight:700; font-size:1.08rem; margin-bottom:4px;
+  }
+  .subject-meta{
+    display:flex; flex-direction:column; gap:3px;
+    font-family:'JetBrains Mono', monospace; font-size:0.72rem; color:var(--text-dim);
+  }
+  .subject-meta a{ color:var(--blue); text-decoration:none; }
+  .subject-meta a:hover{ text-decoration:underline; }
+  .col-count{
+    font-family:'JetBrains Mono', monospace; font-size:0.7rem; color:var(--text-dim);
+    background:rgba(255,255,255,0.05); padding:3px 9px; border-radius:999px;
+    white-space:nowrap;
+  }
 
-        header h1 {
-            font-family: 'Sora', sans-serif;
-            font-weight: 700;
-            font-size: 1.9rem;
-            letter-spacing: -0.01em;
-            background: linear-gradient(90deg, #ffffff, #b9c4ee 70%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
+  .subsection-label{
+    font-family:'JetBrains Mono', monospace; font-size:0.66rem; letter-spacing:0.08em;
+    text-transform:uppercase; color:var(--text-dim); margin-bottom:10px;
+  }
 
-        .composer {
-            max-width: 720px;
-            margin: 0 auto 20px;
-            background: var(--surface);
-            backdrop-filter: blur(14px);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 18px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
+  .cards{ display:flex; flex-direction:column; gap:12px; }
 
-        .composer .full {
-            grid-column: 1 / -1;
-        }
+  .card{
+    background:rgba(255,255,255,0.035); border:1px solid var(--border); border-radius:12px;
+    padding:14px 14px 12px;
+    opacity:0; transform:translateY(10px); animation:rise 0.4s ease forwards;
+    transition:border-color 0.2s ease, background 0.2s ease;
+  }
+  .card:hover{ border-color:rgba(159,123,255,0.45); background:var(--surface-hover); }
+  .card.urgency-soon{ border-color:rgba(255,180,84,0.5); background:rgba(255,180,84,0.06); }
+  .card.urgency-overdue{ border-color:rgba(255,107,107,0.55); background:rgba(255,107,107,0.07); }
+  @keyframes rise{ to{ opacity:1; transform:translateY(0);} }
 
-        .composer label {
-            display: block;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.66rem;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            color: var(--text-dim);
-            margin-bottom: 5px;
-        }
+  .tag-urgent, .tag-soon{
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.62rem;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    padding:1px 7px;
+    border-radius:999px;
+    margin-left:6px;
+  }
+  .tag-urgent{ background:rgba(255,107,107,0.18); color:var(--rust); }
+  .tag-soon{ background:rgba(255,180,84,0.18); color:var(--amber); }
 
-        .composer input,
-        .composer select,
-        .composer textarea {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--border);
-            border-radius: 9px;
-            background: rgba(255, 255, 255, 0.03);
-            color: var(--text);
-            font-family: 'Inter', sans-serif;
-            font-size: 0.85rem;
-        }
+  .card-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .card .tarea{ font-family:'Sora', sans-serif; font-weight:600; font-size:0.98rem; line-height:1.35; margin-bottom:8px; }
+  .card .fecha{
+    display:inline-flex; align-items:center; gap:5px;
+    font-family:'JetBrains Mono', monospace; font-size:0.72rem; color:var(--amber); margin-bottom:8px;
+  }
+  .card .desc{
+    font-size:0.82rem; color:var(--text-dim); line-height:1.5; white-space:pre-wrap;
+    max-height:2.8em; overflow:hidden; cursor:pointer;
+    border-top:1px solid var(--border); padding-top:8px;
+  }
+  .card .desc.expanded{ max-height:none; }
+  .card .desc-toggle{
+    display:inline-block; font-family:'JetBrains Mono', monospace; font-size:0.68rem;
+    color:var(--violet); cursor:pointer; margin-top:6px;
+  }
 
-        .composer select option {
-            background: #161c30;
-            color: var(--text);
-        }
+  .card-actions{ display:flex; gap:6px; flex-shrink:0; }
+  .card-actions button{
+    border:1px solid var(--border); background:rgba(255,255,255,0.03); color:var(--text-dim);
+    border-radius:7px; width:28px; height:28px; cursor:pointer; font-size:0.85rem;
+    display:flex; align-items:center; justify-content:center;
+    transition:background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .card-actions button:hover{ background:rgba(255,255,255,0.08); color:var(--text); }
+  .card-actions .done-btn:hover{ color:var(--mint); border-color:rgba(61,220,151,0.4); }
+  .card-actions .del-btn:hover{ color:var(--rust); border-color:rgba(255,107,107,0.4); }
 
-        .composer textarea {
-            resize: vertical;
-            min-height: 52px;
-            font-family: 'Inter', sans-serif;
-        }
-
-        .composer input:focus,
-        .composer select:focus,
-        .composer textarea:focus {
-            outline: none;
-            border-color: var(--blue);
-            box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.18);
-        }
-
-        .composer select {
-            appearance: none;
-            cursor: pointer;
-        }
-
-        .composer button {
-            grid-column: 1 / -1;
-            padding: 12px;
-            border: none;
-            border-radius: 9px;
-            margin-top: 4px;
-            background: linear-gradient(90deg, var(--blue), var(--violet));
-            color: #fff;
-            font-family: 'Sora', sans-serif;
-            font-weight: 600;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .composer button:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 18px rgba(79, 140, 255, 0.35);
-        }
-
-        .status-line {
-            max-width: 720px;
-            margin: 0 auto 20px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.72rem;
-            color: var(--text-dim);
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .board {
-            max-width: 720px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-        }
-
-        .column {
-            background: var(--surface);
-            backdrop-filter: blur(14px);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 18px;
-        }
-
-        .subject-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 10px;
-            margin-bottom: 14px;
-            padding-bottom: 14px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .subject-head h2 {
-            font-family: 'Sora', sans-serif;
-            font-weight: 700;
-            font-size: 1.08rem;
-            margin-bottom: 4px;
-        }
-
-        .subject-meta {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.72rem;
-            color: var(--text-dim);
-        }
-
-        .subject-meta a {
-            color: var(--blue);
-            text-decoration: none;
-        }
-
-        .subject-meta a:hover {
-            text-decoration: underline;
-        }
-
-        .col-count {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            color: var(--text-dim);
-            background: rgba(255, 255, 255, 0.05);
-            padding: 3px 9px;
-            border-radius: 999px;
-            white-space: nowrap;
-        }
-
-        .subsection-label {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.66rem;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: var(--text-dim);
-            margin-bottom: 10px;
-        }
-
-        .cards {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.035);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 14px 14px 12px;
-            opacity: 0;
-            transform: translateY(10px);
-            animation: rise 0.4s ease forwards;
-            transition: border-color 0.2s ease, background 0.2s ease;
-        }
-
-        .card:hover {
-            border-color: rgba(159, 123, 255, 0.45);
-            background: var(--surface-hover);
-        }
-
-        @keyframes rise {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .card-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 8px;
-        }
-
-        .card .tarea {
-            font-family: 'Sora', sans-serif;
-            font-weight: 600;
-            font-size: 0.98rem;
-            line-height: 1.35;
-            margin-bottom: 8px;
-        }
-
-        .card .fecha {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.72rem;
-            color: var(--amber);
-            margin-bottom: 8px;
-        }
-
-        .card .desc {
-            font-size: 0.82rem;
-            color: var(--text-dim);
-            line-height: 1.5;
-            white-space: pre-wrap;
-            max-height: 2.8em;
-            overflow: hidden;
-            cursor: pointer;
-            border-top: 1px solid var(--border);
-            padding-top: 8px;
-        }
-
-        .card .desc.expanded {
-            max-height: none;
-        }
-
-        .card .desc-toggle {
-            display: inline-block;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.68rem;
-            color: var(--violet);
-            cursor: pointer;
-            margin-top: 6px;
-        }
-
-        .card-actions {
-            display: flex;
-            gap: 6px;
-            flex-shrink: 0;
-        }
-
-        .card-actions button {
-            border: 1px solid var(--border);
-            background: rgba(255, 255, 255, 0.03);
-            color: var(--text-dim);
-            border-radius: 7px;
-            width: 28px;
-            height: 28px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-        }
-
-        .card-actions button:hover {
-            background: rgba(255, 255, 255, 0.08);
-            color: var(--text);
-        }
-
-        .card-actions .done-btn:hover {
-            color: var(--mint);
-            border-color: rgba(61, 220, 151, 0.4);
-        }
-
-        .card-actions .del-btn:hover {
-            color: var(--rust);
-            border-color: rgba(255, 107, 107, 0.4);
-        }
-
-        .empty {
-            font-size: 0.8rem;
-            color: var(--text-dim);
-            opacity: 0.55;
-            font-style: italic;
-        }
-    </style>
+  .empty{ font-size:0.8rem; color:var(--text-dim); opacity:0.55; font-style:italic; }
+</style>
 </head>
-
 <body>
-    <div class="glow-orb a"></div>
-    <div class="glow-orb b"></div>
+  <div class="glow-orb a"></div>
+  <div class="glow-orb b"></div>
 
-    <header>
-        <h1>Tablero de tareas</h1>
-    </header>
+  <header>
+    <h1>Tablero de tareas</h1>
+  </header>
 
-    <div class="composer">
-        <div>
-            <label>Materia</label>
-            <select id="fMateria"></select>
-        </div>
-        <div>
-            <label>Fecha de entrega</label>
-            <input type="date" id="fFecha">
-        </div>
-        <div class="full">
-            <label>Tarea</label>
-            <input type="text" id="fTarea" placeholder="Ej: Terminar modelo en openLCA">
-        </div>
-        <div class="full">
-            <label>Descripción</label>
-            <textarea id="fDesc" placeholder="Detalles, notas, lo que haga falta..."></textarea>
-        </div>
-        <button id="addBtn">+ Agregar tarea</button>
+  <div class="composer">
+    <div>
+      <label>Materia</label>
+      <select id="fMateria"></select>
     </div>
-
-    <div class="status-line">
-        <span id="statusMsg">sin tareas todavía</span>
-        <span id="lastUpdated"></span>
+    <div>
+      <label>Fecha de entrega</label>
+      <input type="date" id="fFecha">
     </div>
+    <div class="full">
+      <label>Tarea</label>
+      <input type="text" id="fTarea" placeholder="Ej: Terminar modelo en openLCA">
+    </div>
+    <div class="full">
+      <label>Descripción</label>
+      <textarea id="fDesc" placeholder="Detalles, notas, lo que haga falta..."></textarea>
+    </div>
+    <button id="addBtn">+ Agregar tarea</button>
+  </div>
 
-    <div class="board" id="board"></div>
+  <div class="status-line">
+    <span id="statusMsg">sin tareas todavía</span>
+    <span id="lastUpdated"></span>
+  </div>
 
-    <script>
-        const MATERIAS = [
-            { nombre: 'Mercadeo', docente: 'Juan Carlos', horario: 'LW 6-8pm', enlace: 'https://udea.zoom.us/j/96574081990' },
-            { nombre: 'Amb. y Desarrollo', docente: 'Sylvia Cacua', horario: 'LW 2-4pm', enlace: 'https://udearroba.zoom.us/j/94103744298' },
-            { nombre: 'Logística II', docente: 'Nora Cadavid', horario: 'LJ 4-6pm', enlace: 'https://udea.zoom.us/j/94643035588' },
-            { nombre: 'Formulación y Evaluación', docente: 'Diana Betancur', horario: 'MJ 12-2pm', enlace: 'https://udearroba.zoom.us/j/93852235430?uname=MARIANA%20PINEDA%20RIOS#success' },
-            { nombre: 'Admin. Producción', docente: 'Yenny Aguirre', horario: 'MJ 2-4pm', enlace: 'https://udearroba.zoom.us/j/96250153965' }
-        ];
+  <div class="board" id="board"></div>
 
-        let tasks = [];
-        let refreshTimer = null;
+<script>
+const MATERIAS = [
+  { nombre: 'Mercadeo', docente: 'Juan Carlos', horario: 'LW 6-8pm', enlace: 'https://udea.zoom.us/j/96574081990' },
+  { nombre: 'Amb. y Desarrollo', docente: 'Sylvia Cacua', horario: 'LW 2-4pm', enlace: 'https://udearroba.zoom.us/j/94103744298' },
+  { nombre: 'Logística II', docente: 'Nora Cadavid', horario: 'LJ 4-6pm', enlace: 'https://udea.zoom.us/j/94643035588' },
+  { nombre: 'Formulación y Evaluación', docente: 'Diana Betancur', horario: 'MJ 12-2pm', enlace: 'https://udearroba.zoom.us/j/93852235430?uname=MARIANA%20PINEDA%20RIOS#success' },
+  { nombre: 'Admin. Producción', docente: 'Yenny Aguirre', horario: 'MJ 2-4pm', enlace: 'https://udearroba.zoom.us/j/96250153965?uname=MARIANA%20PINEDA%20RIOS#success' }
+];
 
-        // === CONFIGURACIÓN DE SUPABASE ===
-        const SUPABASE_URL = 'https://mrtrqsitbfdmqskbqfyi.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_RJrxYqSPyNP6_WtXM2EtRw_lch9ckQO';
-        // ==================================
+let tasks = [];
+let refreshTimer = null;
 
-        const headers = {
-            'apikey': SUPABASE_KEY,
-            'Authorization': 'Bearer ' + SUPABASE_KEY,
-            'Content-Type': 'application/json'
-        };
+// === CONFIGURACIÓN DE SUPABASE ===
+const SUPABASE_URL = 'https://mrtrqsitbfdmqskbqfyi.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_RJrxYqSPyNP6_WtXM2EtRw_lch9ckQO';
+// ==================================
 
-        function escapeHtml(s) {
-            const d = document.createElement('div');
-            d.textContent = s;
-            return d.innerHTML;
-        }
+const headers = {
+  'apikey': SUPABASE_KEY,
+  'Authorization': 'Bearer ' + SUPABASE_KEY,
+  'Content-Type': 'application/json'
+};
 
-        function populateMateriaSelect() {
-            const sel = document.getElementById('fMateria');
-            sel.innerHTML = MATERIAS.map(m => `<option value="${escapeHtml(m.nombre)}">${escapeHtml(m.nombre)}</option>`).join('');
-        }
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
 
-        function render() {
-            const board = document.getElementById('board');
-            board.innerHTML = '';
-            const statusEl = document.getElementById('statusMsg');
+function getUrgency(fecha){
+  if(!fecha) return 'normal';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(fecha + 'T00:00:00');
+  const diffDays = Math.round((due - today) / 86400000);
+  if(diffDays < 0) return 'overdue';
+  if(diffDays <= 3) return 'soon';
+  return 'normal';
+}
 
-            const pending = tasks.filter(t => !t.done);
-            statusEl.textContent = pending.length + ' tarea' + (pending.length === 1 ? '' : 's') + ' pendiente' + (pending.length === 1 ? '' : 's') + ' en total';
+function populateMateriaSelect(){
+  const sel = document.getElementById('fMateria');
+  sel.innerHTML = MATERIAS.map(m => `<option value="${escapeHtml(m.nombre)}">${escapeHtml(m.nombre)}</option>`).join('');
+}
 
-            MATERIAS.forEach(materia => {
-                const items = pending.filter(t => t.materia === materia.nombre);
+function render(){
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  const statusEl = document.getElementById('statusMsg');
 
-                const section = document.createElement('div');
-                section.className = 'column';
-                section.innerHTML = `
+  const pending = tasks.filter(t => !t.done);
+  statusEl.textContent = pending.length + ' tarea' + (pending.length === 1 ? '' : 's') + ' pendiente' + (pending.length === 1 ? '' : 's') + ' en total';
+
+  MATERIAS.forEach(materia => {
+    const items = pending
+      .filter(t => t.materia === materia.nombre)
+      .sort((a, b) => {
+        if(!a.fecha && !b.fecha) return 0;
+        if(!a.fecha) return 1;
+        if(!b.fecha) return -1;
+        return a.fecha.localeCompare(b.fecha);
+      });
+
+    const section = document.createElement('div');
+    section.className = 'column';
+    section.innerHTML = `
       <div class="subject-head">
         <div>
           <h2>${escapeHtml(materia.nombre)}</h2>
@@ -485,21 +295,24 @@
       <div class="subsection-label">Tareas pendientes</div>
       <div class="cards"></div>`;
 
-                const cardsEl = section.querySelector('.cards');
+    const cardsEl = section.querySelector('.cards');
 
-                if (items.length === 0) {
-                    cardsEl.innerHTML = '<div class="empty">no hay tareas pendientes para esta materia</div>';
-                } else {
-                    items.forEach((item, i) => {
-                        const card = document.createElement('div');
-                        card.className = 'card';
-                        card.style.animationDelay = (i * 0.05) + 's';
-                        const hasDesc = item.descripcion && item.descripcion.trim();
-                        card.innerHTML = `
+    if(items.length === 0){
+      cardsEl.innerHTML = '<div class="empty">no hay tareas pendientes para esta materia</div>';
+    } else {
+      items.forEach((item, i) => {
+        const card = document.createElement('div');
+        const urgency = getUrgency(item.fecha);
+        card.className = 'card' + (urgency !== 'normal' ? ' urgency-' + urgency : '');
+        card.style.animationDelay = (i * 0.05) + 's';
+        const hasDesc = item.descripcion && item.descripcion.trim();
+        const urgencyTag = urgency === 'overdue' ? '<span class="tag-urgent">vencida</span>'
+                          : urgency === 'soon' ? '<span class="tag-soon">próxima</span>' : '';
+        card.innerHTML = `
           <div class="card-top">
             <div style="flex:1">
               <div class="tarea">${escapeHtml(item.tarea)}</div>
-              ${item.fecha ? `<div class="fecha">▲ ${escapeHtml(item.fecha)}</div>` : ''}
+              ${item.fecha ? `<div class="fecha">▲ ${escapeHtml(item.fecha)} ${urgencyTag}</div>` : ''}
             </div>
             <div class="card-actions">
               <button class="done-btn" title="Marcar como hecho">✓</button>
@@ -508,97 +321,96 @@
           </div>
           ${hasDesc ? `<div class="desc">${escapeHtml(item.descripcion)}</div><span class="desc-toggle">ver más ↓</span>` : ''}`;
 
-                        if (hasDesc) {
-                            const descEl = card.querySelector('.desc');
-                            const toggleEl = card.querySelector('.desc-toggle');
-                            const toggle = () => {
-                                descEl.classList.toggle('expanded');
-                                toggleEl.textContent = descEl.classList.contains('expanded') ? 'ver menos ↑' : 'ver más ↓';
-                            };
-                            descEl.addEventListener('click', toggle);
-                            toggleEl.addEventListener('click', toggle);
-                        }
-
-                        card.querySelector('.done-btn').addEventListener('click', () => markDone(item.id));
-                        card.querySelector('.del-btn').addEventListener('click', () => deleteTask(item.id));
-
-                        cardsEl.appendChild(card);
-                    });
-                }
-
-                board.appendChild(section);
-            });
+        if(hasDesc){
+          const descEl = card.querySelector('.desc');
+          const toggleEl = card.querySelector('.desc-toggle');
+          const toggle = () => {
+            descEl.classList.toggle('expanded');
+            toggleEl.textContent = descEl.classList.contains('expanded') ? 'ver menos ↑' : 'ver más ↓';
+          };
+          descEl.addEventListener('click', toggle);
+          toggleEl.addEventListener('click', toggle);
         }
 
-        async function loadTasks() {
-            try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/tasks?select=*&order=created_at.asc`, { headers });
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                const data = await res.json();
-                const current = JSON.stringify(tasks);
-                if (JSON.stringify(data) !== current) {
-                    tasks = data;
-                    render();
-                }
-                document.getElementById('lastUpdated').textContent = 'sincronizado ' + new Date().toLocaleTimeString();
-            } catch (e) {
-                document.getElementById('statusMsg').textContent = 'no se pudo conectar a la base de datos';
-                console.error(e);
-            }
-        }
+        card.querySelector('.done-btn').addEventListener('click', () => markDone(item.id));
+        card.querySelector('.del-btn').addEventListener('click', () => deleteTask(item.id));
 
-        async function addTask(task) {
-            try {
-                await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
-                    method: 'POST',
-                    headers: { ...headers, 'Prefer': 'return=minimal' },
-                    body: JSON.stringify(task)
-                });
-                loadTasks();
-            } catch (e) { console.error(e); }
-        }
+        cardsEl.appendChild(card);
+      });
+    }
 
-        async function markDone(id) {
-            try {
-                await fetch(`${SUPABASE_URL}/rest/v1/tasks?id=eq.${id}`, {
-                    method: 'PATCH',
-                    headers: { ...headers, 'Prefer': 'return=minimal' },
-                    body: JSON.stringify({ done: true })
-                });
-                loadTasks();
-            } catch (e) { console.error(e); }
-        }
+    board.appendChild(section);
+  });
+}
 
-        async function deleteTask(id) {
-            try {
-                await fetch(`${SUPABASE_URL}/rest/v1/tasks?id=eq.${id}`, {
-                    method: 'DELETE',
-                    headers
-                });
-                loadTasks();
-            } catch (e) { console.error(e); }
-        }
+async function loadTasks(){
+  try{
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/tasks?select=*&order=created_at.asc`, { headers });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const current = JSON.stringify(tasks);
+    if(JSON.stringify(data) !== current){
+      tasks = data;
+      render();
+    }
+    document.getElementById('lastUpdated').textContent = 'sincronizado ' + new Date().toLocaleTimeString();
+  } catch(e){
+    document.getElementById('statusMsg').textContent = 'no se pudo conectar a la base de datos';
+    console.error(e);
+  }
+}
 
-        document.getElementById('addBtn').addEventListener('click', () => {
-            const materia = document.getElementById('fMateria').value;
-            const tarea = document.getElementById('fTarea').value.trim();
-            const fecha = document.getElementById('fFecha').value;
-            const descripcion = document.getElementById('fDesc').value.trim();
-            if (!tarea) { document.getElementById('fTarea').focus(); return; }
+async function addTask(task){
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/tasks`, {
+      method: 'POST',
+      headers: { ...headers, 'Prefer': 'return=minimal' },
+      body: JSON.stringify(task)
+    });
+    loadTasks();
+  } catch(e){ console.error(e); }
+}
 
-            addTask({ materia, tarea, fecha, descripcion, done: false });
+async function markDone(id){
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/tasks?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { ...headers, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ done: true })
+    });
+    loadTasks();
+  } catch(e){ console.error(e); }
+}
 
-            document.getElementById('fTarea').value = '';
-            document.getElementById('fFecha').value = '';
-            document.getElementById('fDesc').value = '';
-            document.getElementById('fTarea').focus();
-        });
+async function deleteTask(id){
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/tasks?id=eq.${id}`, {
+      method: 'DELETE',
+      headers
+    });
+    loadTasks();
+  } catch(e){ console.error(e); }
+}
 
-        populateMateriaSelect();
-        loadTasks();
-        render();
-        refreshTimer = setInterval(loadTasks, 8000);
-    </script>
+document.getElementById('addBtn').addEventListener('click', () => {
+  const materia = document.getElementById('fMateria').value;
+  const tarea = document.getElementById('fTarea').value.trim();
+  const fecha = document.getElementById('fFecha').value;
+  const descripcion = document.getElementById('fDesc').value.trim();
+  if(!tarea){ document.getElementById('fTarea').focus(); return; }
+
+  addTask({ materia, tarea, fecha, descripcion, done:false });
+
+  document.getElementById('fTarea').value = '';
+  document.getElementById('fFecha').value = '';
+  document.getElementById('fDesc').value = '';
+  document.getElementById('fTarea').focus();
+});
+
+populateMateriaSelect();
+loadTasks();
+render();
+refreshTimer = setInterval(loadTasks, 8000);
+</script>
 </body>
-
 </html>
