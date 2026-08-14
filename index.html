@@ -154,6 +154,12 @@
   .subject-head h2{
     font-family:'Sora', sans-serif; font-weight:700; font-size:1.08rem; margin-bottom:4px;
   }
+  .tag-solo{
+    font-family:'JetBrains Mono', monospace; font-size:0.6rem; letter-spacing:0.04em;
+    text-transform:uppercase; padding:2px 8px; border-radius:999px;
+    background:rgba(159,123,255,0.16); color:var(--violet); vertical-align:middle;
+    margin-left:4px;
+  }
   .subject-meta{
     display:flex; flex-direction:column; gap:3px;
     font-family:'JetBrains Mono', monospace; font-size:0.72rem; color:var(--text-dim);
@@ -333,7 +339,8 @@ const MATERIAS = [
   { nombre: 'Amb. y Desarrollo', docente: 'Sylvia Cacua', horario: 'LW 2-4pm', enlace: 'https://udearroba.zoom.us/j/94103744298' },
   { nombre: 'Logística II', docente: 'Nora Cadavid', horario: 'LJ 4-6pm', enlace: 'https://udea.zoom.us/j/94643035588' },
   { nombre: 'Formulación y Evaluación', docente: 'Diana Betancur', horario: 'MJ 12-2pm', enlace: 'https://udearroba.zoom.us/j/93852235430?uname=MARIANA%20PINEDA%20RIOS#success' },
-  { nombre: 'Admin. Producción', docente: 'Yenny Aguirre', horario: 'MJ 2-4pm', enlace: 'https://udearroba.zoom.us/j/96250153965?uname=MARIANA%20PINEDA%20RIOS#success' }
+  { nombre: 'Admin. Producción', docente: 'Yenny Aguirre', horario: 'MJ 2-4pm', enlace: 'https://udearroba.zoom.us/j/96250153965?uname=MARIANA%20PINEDA%20RIOS#success' },
+  { nombre: 'Negocios Internacionales', docente: 'Elkin', horario: '', enlace: '', soloPara: 'Miguel' }
 ];
 
 let tasks = [];
@@ -403,9 +410,11 @@ function renderAlerts(pending){
   el.innerHTML = withDate.map(t => {
     const urgency = getUrgency(t.fecha);
     const confirmTag = t.confirmada ? '<span class="tag-confirmed">confirmada</span>' : '<span class="tag-unconfirmed">por confirmar</span>';
+    const materiaObj = MATERIAS.find(m => m.nombre === t.materia);
+    const soloTag = materiaObj && materiaObj.soloPara ? `<span class="tag-solo">solo ${escapeHtml(materiaObj.soloPara)}</span>` : '';
     return `
       <div class="alert-item al-${urgency}">
-        <div class="a-tarea">${escapeHtml(t.tarea)}</div>
+        <div class="a-tarea">${escapeHtml(t.tarea)} ${soloTag}</div>
         <div class="a-materia">${escapeHtml(t.materia || 'Sin materia')}</div>
         <div class="a-when">${formatCountdown(t.fecha)} ${confirmTag}</div>
       </div>`;
@@ -414,7 +423,7 @@ function renderAlerts(pending){
 
 function populateMateriaSelect(){
   const sel = document.getElementById('fMateria');
-  sel.innerHTML = MATERIAS.map(m => `<option value="${escapeHtml(m.nombre)}">${escapeHtml(m.nombre)}</option>`).join('');
+  sel.innerHTML = MATERIAS.map(m => `<option value="${escapeHtml(m.nombre)}">${escapeHtml(m.nombre)}${m.soloPara ? ' (solo ' + escapeHtml(m.soloPara) + ')' : ''}</option>`).join('');
 }
 
 function render(){
@@ -442,11 +451,11 @@ function render(){
     section.innerHTML = `
       <div class="subject-head">
         <div>
-          <h2>${escapeHtml(materia.nombre)}</h2>
+          <h2>${escapeHtml(materia.nombre)} ${materia.soloPara ? `<span class="tag-solo">solo ${escapeHtml(materia.soloPara)}</span>` : ''}</h2>
           <div class="subject-meta">
             <span>👤 ${escapeHtml(materia.docente)}</span>
-            <span>🕒 ${escapeHtml(materia.horario)}</span>
-            <span>🔗 <a href="${materia.enlace}" target="_blank" rel="noopener">Enlace de clase</a></span>
+            ${materia.horario ? `<span>🕒 ${escapeHtml(materia.horario)}</span>` : `<span style="opacity:0.5">🕒 horario por confirmar</span>`}
+            ${materia.enlace ? `<span>🔗 <a href="${materia.enlace}" target="_blank" rel="noopener">Enlace de clase</a></span>` : `<span style="opacity:0.5">🔗 enlace por confirmar</span>`}
           </div>
         </div>
         <span class="col-count">${items.length} pendiente${items.length === 1 ? '' : 's'}</span>
