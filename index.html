@@ -89,6 +89,13 @@
     outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(79,140,255,0.18);
   }
   .composer select{ appearance:none; cursor:pointer; }
+  .checkbox-row{
+    display:flex !important; align-items:center; gap:6px; margin-top:8px;
+    font-family:'Inter', sans-serif !important; font-size:0.78rem !important;
+    text-transform:none !important; letter-spacing:normal !important; color:var(--text-dim) !important;
+    cursor:pointer;
+  }
+  .checkbox-row input[type=checkbox]{ width:auto !important; accent-color:var(--blue); cursor:pointer; }
   .composer button{
     grid-column:1 / -1;
     padding:12px; border:none; border-radius:9px; margin-top:4px;
@@ -188,6 +195,18 @@
   }
   .tag-urgent{ background:rgba(255,107,107,0.18); color:var(--rust); }
   .tag-soon{ background:rgba(255,180,84,0.18); color:var(--amber); }
+  .tag-confirmed, .tag-unconfirmed{
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.62rem;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    padding:1px 7px;
+    border-radius:999px;
+    margin-left:6px;
+    display:inline-block;
+  }
+  .tag-confirmed{ background:rgba(61,220,151,0.16); color:var(--mint); }
+  .tag-unconfirmed{ background:rgba(255,255,255,0.06); color:var(--text-dim); border:1px dashed var(--border); }
 
   .card-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
   .card .tarea{ font-family:'Sora', sans-serif; font-weight:600; font-size:0.98rem; line-height:1.35; margin-bottom:8px; }
@@ -279,6 +298,7 @@
         <div>
           <label>Fecha y hora de entrega</label>
           <input type="datetime-local" id="fFecha">
+          <label class="checkbox-row"><input type="checkbox" id="fConfirmada"> Fecha confirmada</label>
         </div>
         <div class="full">
           <label>Tarea</label>
@@ -382,11 +402,12 @@ function renderAlerts(pending){
 
   el.innerHTML = withDate.map(t => {
     const urgency = getUrgency(t.fecha);
+    const confirmTag = t.confirmada ? '<span class="tag-confirmed">confirmada</span>' : '<span class="tag-unconfirmed">por confirmar</span>';
     return `
       <div class="alert-item al-${urgency}">
         <div class="a-tarea">${escapeHtml(t.tarea)}</div>
         <div class="a-materia">${escapeHtml(t.materia || 'Sin materia')}</div>
-        <div class="a-when">${formatCountdown(t.fecha)}</div>
+        <div class="a-when">${formatCountdown(t.fecha)} ${confirmTag}</div>
       </div>`;
   }).join('');
 }
@@ -446,13 +467,14 @@ function render(){
         const hasDesc = item.descripcion && item.descripcion.trim();
         const urgencyTag = urgency === 'overdue' ? '<span class="tag-urgent">vencida</span>'
                           : urgency === 'soon' ? '<span class="tag-soon">próxima</span>' : '';
+        const confirmTag = item.confirmada ? '<span class="tag-confirmed">confirmada</span>' : '<span class="tag-unconfirmed">por confirmar</span>';
         const countdown = item.fecha ? formatCountdown(item.fecha) : '';
         card.innerHTML = `
           <div class="card-top">
             <div style="flex:1">
               <div class="tarea">${escapeHtml(item.tarea)}</div>
               <div class="fecha-block">
-                ${item.fecha ? `<div class="fecha">▲ ${formatFecha(item.fecha)} ${urgencyTag}</div><div class="countdown ${urgency !== 'normal' ? 'countdown-' + urgency : ''}">${countdown}</div>` : '<div class="fecha" style="opacity:0.5">sin fecha</div>'}
+                ${item.fecha ? `<div class="fecha">▲ ${formatFecha(item.fecha)} ${urgencyTag} ${confirmTag}</div><div class="countdown ${urgency !== 'normal' ? 'countdown-' + urgency : ''}">${countdown}</div>` : `<div class="fecha" style="opacity:0.5">sin fecha ${confirmTag}</div>`}
               </div>
             </div>
             <div class="card-actions">
@@ -504,12 +526,18 @@ function render(){
           block.innerHTML = `
             <div class="edit-fecha-row">
               <input type="datetime-local" class="fecha-input" value="${escapeHtml(currentVal)}">
+            </div>
+            <label class="checkbox-row" style="margin:0 0 8px 0">
+              <input type="checkbox" class="confirmada-input" ${item.confirmada ? 'checked' : ''}> Fecha confirmada
+            </label>
+            <div class="edit-fecha-row">
               <button class="save-fecha">Guardar</button>
               <button class="cancel-fecha">Cancelar</button>
             </div>`;
           block.querySelector('.save-fecha').addEventListener('click', () => {
             const newVal = block.querySelector('.fecha-input').value;
-            updateFecha(item.id, newVal);
+            const confirmada = block.querySelector('.confirmada-input').checked;
+            updateFecha(item.id, newVal, confirmada);
           });
           block.querySelector('.cancel-fecha').addEventListener('click', () => render());
         });
@@ -561,12 +589,12 @@ async function updateDescripcion(id, nuevaDescripcion){
   } catch(e){ console.error(e); }
 }
 
-async function updateFecha(id, nuevaFecha){
+async function updateFecha(id, nuevaFecha, confirmada){
   try{
     await fetch(`${SUPABASE_URL}/rest/v1/tasks?id=eq.${id}`, {
       method: 'PATCH',
       headers: { ...headers, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ fecha: nuevaFecha || null })
+      body: JSON.stringify({ fecha: nuevaFecha || null, confirmada: !!confirmada })
     });
     loadTasks();
   } catch(e){ console.error(e); }
@@ -598,13 +626,15 @@ document.getElementById('addBtn').addEventListener('click', () => {
   const tarea = document.getElementById('fTarea').value.trim();
   const fecha = document.getElementById('fFecha').value;
   const descripcion = document.getElementById('fDesc').value.trim();
+  const confirmada = document.getElementById('fConfirmada').checked;
   if(!tarea){ document.getElementById('fTarea').focus(); return; }
 
-  addTask({ materia, tarea, fecha, descripcion, done:false });
+  addTask({ materia, tarea, fecha, descripcion, confirmada, done:false });
 
   document.getElementById('fTarea').value = '';
   document.getElementById('fFecha').value = '';
   document.getElementById('fDesc').value = '';
+  document.getElementById('fConfirmada').checked = false;
   document.getElementById('fTarea').focus();
 });
 
