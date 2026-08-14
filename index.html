@@ -172,6 +172,27 @@
     display:inline-block; font-family:'JetBrains Mono', monospace; font-size:0.68rem;
     color:var(--violet); cursor:pointer; margin-top:6px;
   }
+  .card .desc-edit-toggle{
+    display:inline-block; font-family:'JetBrains Mono', monospace; font-size:0.68rem;
+    color:var(--text-dim); cursor:pointer; margin-top:6px; margin-left:10px;
+  }
+  .card .desc-edit-toggle:hover{ color:var(--blue); }
+  .card .desc-edit-toggle.add-desc{ margin-left:0; }
+
+  .edit-desc-panel{ margin-top:6px; }
+  .edit-desc-panel textarea{
+    width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px;
+    background:rgba(255,255,255,0.04); color:var(--text);
+    font-family:'Inter', sans-serif; font-size:0.82rem; resize:vertical; min-height:60px;
+    margin-bottom:6px;
+  }
+  .edit-desc-panel .desc-actions{ display:flex; gap:6px; }
+  .edit-desc-panel button{
+    border:none; border-radius:6px; padding:5px 9px; cursor:pointer;
+    font-family:'Sora', sans-serif; font-size:0.7rem; font-weight:600;
+  }
+  .edit-desc-panel .save-desc{ background:var(--blue); color:#fff; }
+  .edit-desc-panel .cancel-desc{ background:rgba(255,255,255,0.06); color:var(--text-dim); }
 
   .card-actions{ display:flex; gap:6px; flex-shrink:0; }
   .card-actions button{
@@ -182,7 +203,21 @@
   }
   .card-actions button:hover{ background:rgba(255,255,255,0.08); color:var(--text); }
   .card-actions .done-btn:hover{ color:var(--mint); border-color:rgba(61,220,151,0.4); }
+  .card-actions .edit-btn:hover{ color:var(--blue); border-color:rgba(79,140,255,0.4); }
   .card-actions .del-btn:hover{ color:var(--rust); border-color:rgba(255,107,107,0.4); }
+
+  .edit-fecha-row{ display:flex; gap:6px; align-items:center; margin-bottom:8px; }
+  .edit-fecha-row input{
+    padding:6px 8px; border:1px solid var(--border); border-radius:7px;
+    background:rgba(255,255,255,0.04); color:var(--text);
+    font-family:'JetBrains Mono', monospace; font-size:0.72rem;
+  }
+  .edit-fecha-row button{
+    border:none; border-radius:6px; padding:5px 9px; cursor:pointer;
+    font-family:'Sora', sans-serif; font-size:0.7rem; font-weight:600;
+  }
+  .edit-fecha-row .save-fecha{ background:var(--blue); color:#fff; }
+  .edit-fecha-row .cancel-fecha{ background:rgba(255,255,255,0.06); color:var(--text-dim); }
 
   .empty{ font-size:0.8rem; color:var(--text-dim); opacity:0.55; font-style:italic; }
 </style>
@@ -341,14 +376,21 @@ function render(){
           <div class="card-top">
             <div style="flex:1">
               <div class="tarea">${escapeHtml(item.tarea)}</div>
-              ${item.fecha ? `<div class="fecha">▲ ${formatFecha(item.fecha)} ${urgencyTag}</div><div class="countdown ${urgency !== 'normal' ? 'countdown-' + urgency : ''}">${countdown}</div>` : ''}
+              <div class="fecha-block">
+                ${item.fecha ? `<div class="fecha">▲ ${formatFecha(item.fecha)} ${urgencyTag}</div><div class="countdown ${urgency !== 'normal' ? 'countdown-' + urgency : ''}">${countdown}</div>` : '<div class="fecha" style="opacity:0.5">sin fecha</div>'}
+              </div>
             </div>
             <div class="card-actions">
               <button class="done-btn" title="Marcar como hecho">✓</button>
+              <button class="edit-btn" title="Editar fecha">✎</button>
               <button class="del-btn" title="Eliminar">✕</button>
             </div>
           </div>
-          ${hasDesc ? `<div class="desc">${escapeHtml(item.descripcion)}</div><span class="desc-toggle">ver más ↓</span>` : ''}`;
+          <div class="desc-block">
+            ${hasDesc
+              ? `<div class="desc">${escapeHtml(item.descripcion)}</div><span class="desc-toggle">ver más ↓</span><span class="desc-edit-toggle">editar</span>`
+              : `<span class="desc-edit-toggle add-desc">+ agregar descripción</span>`}
+          </div>`;
 
         if(hasDesc){
           const descEl = card.querySelector('.desc');
@@ -361,8 +403,41 @@ function render(){
           toggleEl.addEventListener('click', toggle);
         }
 
+        card.querySelector('.desc-edit-toggle').addEventListener('click', () => {
+          const block = card.querySelector('.desc-block');
+          const currentVal = item.descripcion || '';
+          block.innerHTML = `
+            <div class="edit-desc-panel">
+              <textarea class="desc-input" placeholder="Detalles, notas...">${escapeHtml(currentVal)}</textarea>
+              <div class="desc-actions">
+                <button class="save-desc">Guardar</button>
+                <button class="cancel-desc">Cancelar</button>
+              </div>
+            </div>`;
+          block.querySelector('.save-desc').addEventListener('click', () => {
+            const newVal = block.querySelector('.desc-input').value.trim();
+            updateDescripcion(item.id, newVal);
+          });
+          block.querySelector('.cancel-desc').addEventListener('click', () => render());
+        });
+
         card.querySelector('.done-btn').addEventListener('click', () => markDone(item.id));
         card.querySelector('.del-btn').addEventListener('click', () => deleteTask(item.id));
+        card.querySelector('.edit-btn').addEventListener('click', () => {
+          const block = card.querySelector('.fecha-block');
+          const currentVal = item.fecha || '';
+          block.innerHTML = `
+            <div class="edit-fecha-row">
+              <input type="datetime-local" class="fecha-input" value="${escapeHtml(currentVal)}">
+              <button class="save-fecha">Guardar</button>
+              <button class="cancel-fecha">Cancelar</button>
+            </div>`;
+          block.querySelector('.save-fecha').addEventListener('click', () => {
+            const newVal = block.querySelector('.fecha-input').value;
+            updateFecha(item.id, newVal);
+          });
+          block.querySelector('.cancel-fecha').addEventListener('click', () => render());
+        });
 
         cardsEl.appendChild(card);
       });
@@ -395,6 +470,28 @@ async function addTask(task){
       method: 'POST',
       headers: { ...headers, 'Prefer': 'return=minimal' },
       body: JSON.stringify(task)
+    });
+    loadTasks();
+  } catch(e){ console.error(e); }
+}
+
+async function updateDescripcion(id, nuevaDescripcion){
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/tasks?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { ...headers, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ descripcion: nuevaDescripcion || null })
+    });
+    loadTasks();
+  } catch(e){ console.error(e); }
+}
+
+async function updateFecha(id, nuevaFecha){
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/tasks?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { ...headers, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ fecha: nuevaFecha || null })
     });
     loadTasks();
   } catch(e){ console.error(e); }
