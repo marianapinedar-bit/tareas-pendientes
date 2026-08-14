@@ -44,9 +44,20 @@
   .glow-orb.b{ background:var(--violet); bottom:-160px; right:-120px; animation-delay:-6s; }
   @keyframes drift{ 0%{transform:translate(0,0);} 100%{transform:translate(40px,30px);} }
 
-  header, .composer, .status-line, .board{ position:relative; z-index:1; }
+  header, .composer, .status-line, .board, .layout{ position:relative; z-index:1; }
 
-  header{ max-width:720px; margin:0 auto 22px; }
+  .layout{
+    max-width:1040px; margin:0 auto;
+    display:grid;
+    grid-template-columns:1fr 300px;
+    gap:28px;
+    align-items:start;
+  }
+  @media (max-width:880px){
+    .layout{ grid-template-columns:1fr; }
+  }
+
+  header{ margin:0 0 22px; }
   header h1{
     font-family:'Sora', sans-serif; font-weight:700; font-size:1.9rem; letter-spacing:-0.01em;
     background:linear-gradient(90deg, #ffffff, #b9c4ee 70%);
@@ -54,7 +65,7 @@
   }
 
   .composer{
-    max-width:720px; margin:0 auto 20px;
+    margin:0 0 20px;
     background:var(--surface); backdrop-filter:blur(14px);
     border:1px solid var(--border); border-radius:16px;
     padding:18px;
@@ -88,12 +99,40 @@
   .composer button:hover{ transform:translateY(-1px); box-shadow:0 6px 18px rgba(79,140,255,0.35); }
 
   .status-line{
-    max-width:720px; margin:0 auto 20px;
+    margin:0 0 20px;
     font-family:'JetBrains Mono', monospace; font-size:0.72rem; color:var(--text-dim);
     display:flex; justify-content:space-between;
   }
 
-  .board{ max-width:720px; margin:0 auto; display:flex; flex-direction:column; gap:18px; }
+  .board{ display:flex; flex-direction:column; gap:18px; }
+
+  .sidebar{ position:sticky; top:24px; display:flex; flex-direction:column; gap:14px; }
+  .sidebar .panel{
+    background:var(--surface); backdrop-filter:blur(14px);
+    border:1px solid var(--border); border-radius:16px; padding:16px;
+  }
+  .sidebar h3{
+    font-family:'Sora', sans-serif; font-weight:600; font-size:0.85rem;
+    display:flex; align-items:center; gap:6px; margin-bottom:12px;
+  }
+  .sidebar .alert-list{ display:flex; flex-direction:column; gap:8px; }
+  .alert-item{
+    display:block; padding:10px 11px; border-radius:10px;
+    border:1px solid var(--border); background:rgba(255,255,255,0.03);
+    font-size:0.78rem;
+  }
+  .alert-item .a-tarea{ font-family:'Sora', sans-serif; font-weight:600; font-size:0.82rem; margin-bottom:3px; }
+  .alert-item .a-materia{
+    font-family:'JetBrains Mono', monospace; font-size:0.62rem; text-transform:uppercase;
+    letter-spacing:0.04em; color:var(--text-dim); margin-bottom:5px;
+  }
+  .alert-item .a-when{ font-family:'JetBrains Mono', monospace; font-size:0.7rem; }
+  .alert-item.al-overdue{ border-color:rgba(255,107,107,0.5); background:rgba(255,107,107,0.07); }
+  .alert-item.al-overdue .a-when{ color:var(--rust); }
+  .alert-item.al-soon{ border-color:rgba(255,180,84,0.5); background:rgba(255,180,84,0.07); }
+  .alert-item.al-soon .a-when{ color:var(--amber); }
+  .alert-item.al-normal .a-when{ color:var(--text-dim); }
+  .sidebar .empty{ font-size:0.78rem; color:var(--text-dim); opacity:0.6; font-style:italic; }
 
   .column{
     background:var(--surface); backdrop-filter:blur(14px);
@@ -230,32 +269,43 @@
     <h1>Tablero de tareas</h1>
   </header>
 
-  <div class="composer">
-    <div>
-      <label>Materia</label>
-      <select id="fMateria"></select>
-    </div>
-    <div>
-      <label>Fecha y hora de entrega</label>
-      <input type="datetime-local" id="fFecha">
-    </div>
-    <div class="full">
-      <label>Tarea</label>
-      <input type="text" id="fTarea" placeholder="Ej: Terminar modelo en openLCA">
-    </div>
-    <div class="full">
-      <label>Descripción</label>
-      <textarea id="fDesc" placeholder="Detalles, notas, lo que haga falta..."></textarea>
-    </div>
-    <button id="addBtn">+ Agregar tarea</button>
-  </div>
+  <div class="layout">
+    <div class="main-col">
+      <div class="composer">
+        <div>
+          <label>Materia</label>
+          <select id="fMateria"></select>
+        </div>
+        <div>
+          <label>Fecha y hora de entrega</label>
+          <input type="datetime-local" id="fFecha">
+        </div>
+        <div class="full">
+          <label>Tarea</label>
+          <input type="text" id="fTarea" placeholder="Ej: Terminar modelo en openLCA">
+        </div>
+        <div class="full">
+          <label>Descripción</label>
+          <textarea id="fDesc" placeholder="Detalles, notas, lo que haga falta..."></textarea>
+        </div>
+        <button id="addBtn">+ Agregar tarea</button>
+      </div>
 
-  <div class="status-line">
-    <span id="statusMsg">sin tareas todavía</span>
-    <span id="lastUpdated"></span>
-  </div>
+      <div class="status-line">
+        <span id="statusMsg">sin tareas todavía</span>
+        <span id="lastUpdated"></span>
+      </div>
 
-  <div class="board" id="board"></div>
+      <div class="board" id="board"></div>
+    </div>
+
+    <aside class="sidebar">
+      <div class="panel">
+        <h3>⚡ Alertas</h3>
+        <div class="alert-list" id="alertList"></div>
+      </div>
+    </aside>
+  </div>
 
 <script>
 const MATERIAS = [
@@ -318,6 +368,29 @@ function formatFecha(fecha){
          d.toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' });
 }
 
+function renderAlerts(pending){
+  const el = document.getElementById('alertList');
+  const withDate = pending
+    .filter(t => t.fecha)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha))
+    .slice(0, 8);
+
+  if(withDate.length === 0){
+    el.innerHTML = '<div class="empty">nada urgente por ahora</div>';
+    return;
+  }
+
+  el.innerHTML = withDate.map(t => {
+    const urgency = getUrgency(t.fecha);
+    return `
+      <div class="alert-item al-${urgency}">
+        <div class="a-tarea">${escapeHtml(t.tarea)}</div>
+        <div class="a-materia">${escapeHtml(t.materia || 'Sin materia')}</div>
+        <div class="a-when">${formatCountdown(t.fecha)}</div>
+      </div>`;
+  }).join('');
+}
+
 function populateMateriaSelect(){
   const sel = document.getElementById('fMateria');
   sel.innerHTML = MATERIAS.map(m => `<option value="${escapeHtml(m.nombre)}">${escapeHtml(m.nombre)}</option>`).join('');
@@ -330,6 +403,8 @@ function render(){
 
   const pending = tasks.filter(t => !t.done);
   statusEl.textContent = pending.length + ' tarea' + (pending.length === 1 ? '' : 's') + ' pendiente' + (pending.length === 1 ? '' : 's') + ' en total';
+
+  renderAlerts(pending);
 
   MATERIAS.forEach(materia => {
     const items = pending
