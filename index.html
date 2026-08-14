@@ -154,8 +154,14 @@
   .card .tarea{ font-family:'Sora', sans-serif; font-weight:600; font-size:0.98rem; line-height:1.35; margin-bottom:8px; }
   .card .fecha{
     display:inline-flex; align-items:center; gap:5px;
-    font-family:'JetBrains Mono', monospace; font-size:0.72rem; color:var(--amber); margin-bottom:8px;
+    font-family:'JetBrains Mono', monospace; font-size:0.72rem; color:var(--amber); margin-bottom:4px;
   }
+  .card .countdown{
+    font-family:'JetBrains Mono', monospace; font-size:0.7rem; color:var(--text-dim);
+    margin-bottom:8px;
+  }
+  .card .countdown-soon{ color:var(--amber); }
+  .card .countdown-overdue{ color:var(--rust); }
   .card .desc{
     font-size:0.82rem; color:var(--text-dim); line-height:1.5; white-space:pre-wrap;
     max-height:2.8em; overflow:hidden; cursor:pointer;
@@ -195,8 +201,8 @@
       <select id="fMateria"></select>
     </div>
     <div>
-      <label>Fecha de entrega</label>
-      <input type="date" id="fFecha">
+      <label>Fecha y hora de entrega</label>
+      <input type="datetime-local" id="fFecha">
     </div>
     <div class="full">
       <label>Tarea</label>
@@ -247,12 +253,34 @@ function escapeHtml(s){
 
 function getUrgency(fecha){
   if(!fecha) return 'normal';
-  const today = new Date(); today.setHours(0,0,0,0);
-  const due = new Date(fecha + 'T00:00:00');
-  const diffDays = Math.round((due - today) / 86400000);
-  if(diffDays < 0) return 'overdue';
-  if(diffDays <= 3) return 'soon';
+  const now = new Date();
+  const due = new Date(fecha);
+  const diffHours = (due - now) / 3600000;
+  if(diffHours < 0) return 'overdue';
+  if(diffHours <= 72) return 'soon';
   return 'normal';
+}
+
+function formatCountdown(fecha){
+  if(!fecha) return '';
+  const now = new Date();
+  const due = new Date(fecha);
+  const diffMs = due - now;
+  const overdue = diffMs < 0;
+  const absMs = Math.abs(diffMs);
+  const days = Math.floor(absMs / 86400000);
+  const hours = Math.floor((absMs % 86400000) / 3600000);
+  const parts = [];
+  if(days > 0) parts.push(days + 'd');
+  parts.push(hours + 'h');
+  return overdue ? `vencida hace ${parts.join(' ')}` : `faltan ${parts.join(' ')}`;
+}
+
+function formatFecha(fecha){
+  if(!fecha) return '';
+  const d = new Date(fecha);
+  return d.toLocaleDateString('es-CO', { day:'2-digit', month:'short' }) + ' · ' +
+         d.toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' });
 }
 
 function populateMateriaSelect(){
@@ -308,11 +336,12 @@ function render(){
         const hasDesc = item.descripcion && item.descripcion.trim();
         const urgencyTag = urgency === 'overdue' ? '<span class="tag-urgent">vencida</span>'
                           : urgency === 'soon' ? '<span class="tag-soon">próxima</span>' : '';
+        const countdown = item.fecha ? formatCountdown(item.fecha) : '';
         card.innerHTML = `
           <div class="card-top">
             <div style="flex:1">
               <div class="tarea">${escapeHtml(item.tarea)}</div>
-              ${item.fecha ? `<div class="fecha">▲ ${escapeHtml(item.fecha)} ${urgencyTag}</div>` : ''}
+              ${item.fecha ? `<div class="fecha">▲ ${formatFecha(item.fecha)} ${urgencyTag}</div><div class="countdown ${urgency !== 'normal' ? 'countdown-' + urgency : ''}">${countdown}</div>` : ''}
             </div>
             <div class="card-actions">
               <button class="done-btn" title="Marcar como hecho">✓</button>
@@ -411,6 +440,7 @@ populateMateriaSelect();
 loadTasks();
 render();
 refreshTimer = setInterval(loadTasks, 8000);
+setInterval(render, 60000); // actualiza los contadores de "faltan Xd Xh" cada minuto
 </script>
 </body>
 </html>
