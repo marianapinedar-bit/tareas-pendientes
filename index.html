@@ -122,7 +122,7 @@
     font-family:'Sora', sans-serif; font-weight:600; font-size:0.85rem;
     display:flex; align-items:center; gap:6px; margin-bottom:12px;
   }
-  .sidebar .alert-list{ display:flex; flex-direction:column; gap:8px; }
+  .sidebar .alert-list{ display:flex; flex-direction:column; gap:8px; max-height:70vh; overflow-y:auto; padding-right:4px; }
   .alert-item{
     display:block; padding:10px 11px; border-radius:10px;
     border:1px solid var(--border); background:rgba(255,255,255,0.03);
@@ -418,8 +418,7 @@ function renderAlerts(pending){
   const el = document.getElementById('alertList');
   const withDate = pending
     .filter(t => t.fecha)
-    .sort((a, b) => a.fecha.localeCompare(b.fecha))
-    .slice(0, 8);
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
 
   if(withDate.length === 0){
     el.innerHTML = '<div class="empty">nada urgente por ahora</div>';
