@@ -431,9 +431,12 @@ function renderAlerts(pending){
     const confirmTag = t.confirmada ? '<span class="tag-confirmed">confirmada</span>' : '<span class="tag-unconfirmed">por confirmar</span>';
     const materiaObj = MATERIAS.find(m => m.nombre === t.materia);
     const soloTag = materiaObj && materiaObj.soloPara ? `<span class="tag-solo">solo ${escapeHtml(materiaObj.soloPara)}</span>` : '';
+    const pct = (t.porcentaje || '').trim();
+    const isSeguimiento = pct && pct.toLowerCase().includes('seguimiento');
+    const pctTag = pct ? `<span class="tag-pct${isSeguimiento ? ' tag-seguimiento' : ''}">${escapeHtml(pct)}</span>` : '';
     return `
       <div class="alert-item al-${urgency}">
-        <div class="a-tarea">${escapeHtml(t.tarea)} ${soloTag}</div>
+        <div class="a-tarea">${escapeHtml(t.tarea)} ${pctTag} ${soloTag}</div>
         <div class="a-materia">${escapeHtml(t.materia || 'Sin materia')}</div>
         <div class="a-when">${formatCountdown(t.fecha)} ${confirmTag}</div>
       </div>`;
