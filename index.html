@@ -213,6 +213,18 @@
   }
   .tag-confirmed{ background:rgba(61,220,151,0.16); color:var(--mint); }
   .tag-unconfirmed{ background:rgba(255,255,255,0.06); color:var(--text-dim); border:1px dashed var(--border); }
+  .tag-pct{
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.62rem;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    padding:1px 7px;
+    border-radius:999px;
+    margin-left:6px;
+    display:inline-block;
+    background:rgba(79,140,255,0.16); color:var(--blue);
+  }
+  .tag-pct.tag-seguimiento{ background:rgba(159,123,255,0.16); color:var(--violet); }
 
   .card-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
   .card .tarea{ font-family:'Sora', sans-serif; font-weight:600; font-size:0.98rem; line-height:1.35; margin-bottom:8px; }
@@ -282,6 +294,9 @@
   }
   .edit-fecha-row .save-fecha{ background:var(--blue); color:#fff; }
   .edit-fecha-row .cancel-fecha{ background:rgba(255,255,255,0.06); color:var(--text-dim); }
+  .edit-fecha-row input.tarea-input, .edit-fecha-row input.porcentaje-input{
+    font-family:'Inter', sans-serif; width:100%;
+  }
 
   .empty{ font-size:0.8rem; color:var(--text-dim); opacity:0.55; font-style:italic; }
 </style>
@@ -309,6 +324,10 @@
         <div class="full">
           <label>Tarea</label>
           <input type="text" id="fTarea" placeholder="Ej: Terminar modelo en openLCA">
+        </div>
+        <div class="full">
+          <label>Porcentaje</label>
+          <input type="text" id="fPorcentaje" placeholder="Ej: 10%, 25% o Seguimiento">
         </div>
         <div class="full">
           <label>Descripción</label>
@@ -479,17 +498,20 @@ function render(){
                           : urgency === 'soon' ? '<span class="tag-soon">próxima</span>' : '';
         const confirmTag = item.confirmada ? '<span class="tag-confirmed">confirmada</span>' : '<span class="tag-unconfirmed">por confirmar</span>';
         const countdown = item.fecha ? formatCountdown(item.fecha) : '';
+        const pct = (item.porcentaje || '').trim();
+        const isSeguimiento = pct && pct.toLowerCase().includes('seguimiento');
+        const pctTag = pct ? `<span class="tag-pct${isSeguimiento ? ' tag-seguimiento' : ''}">${escapeHtml(pct)}</span>` : '';
         card.innerHTML = `
           <div class="card-top">
-            <div style="flex:1">
-              <div class="tarea">${escapeHtml(item.tarea)}</div>
+            <div class="card-main" style="flex:1">
+              <div class="tarea">${escapeHtml(item.tarea)} ${pctTag}</div>
               <div class="fecha-block">
                 ${item.fecha ? `<div class="fecha">▲ ${formatFecha(item.fecha)} ${urgencyTag} ${confirmTag}</div><div class="countdown ${urgency !== 'normal' ? 'countdown-' + urgency : ''}">${countdown}</div>` : `<div class="fecha" style="opacity:0.5">sin fecha ${confirmTag}</div>`}
               </div>
             </div>
             <div class="card-actions">
               <button class="done-btn" title="Marcar como hecho">✓</button>
-              <button class="edit-btn" title="Editar fecha">✎</button>
+              <button class="edit-btn" title="Editar tarea">✎</button>
               <button class="del-btn" title="Eliminar">✕</button>
             </div>
           </div>
@@ -531,23 +553,33 @@ function render(){
         card.querySelector('.done-btn').addEventListener('click', () => markDone(item.id));
         card.querySelector('.del-btn').addEventListener('click', () => deleteTask(item.id));
         card.querySelector('.edit-btn').addEventListener('click', () => {
-          const block = card.querySelector('.fecha-block');
-          const currentVal = item.fecha || '';
+          const block = card.querySelector('.card-main');
+          const currentFecha = item.fecha || '';
           block.innerHTML = `
             <div class="edit-fecha-row">
-              <input type="datetime-local" class="fecha-input" value="${escapeHtml(currentVal)}">
+              <input type="text" class="tarea-input" value="${escapeHtml(item.tarea)}" placeholder="Nombre de la tarea">
+            </div>
+            <div class="edit-fecha-row">
+              <input type="datetime-local" class="fecha-input" value="${escapeHtml(currentFecha)}">
             </div>
             <label class="checkbox-row" style="margin:0 0 8px 0">
               <input type="checkbox" class="confirmada-input" ${item.confirmada ? 'checked' : ''}> Fecha confirmada
             </label>
             <div class="edit-fecha-row">
+              <input type="text" class="porcentaje-input" value="${escapeHtml(item.porcentaje || '')}" placeholder="Ej: 10%, 25% o Seguimiento">
+            </div>
+            <div class="edit-fecha-row">
               <button class="save-fecha">Guardar</button>
               <button class="cancel-fecha">Cancelar</button>
             </div>`;
           block.querySelector('.save-fecha').addEventListener('click', () => {
-            const newVal = block.querySelector('.fecha-input').value;
+            const tareaInput = block.querySelector('.tarea-input');
+            const nuevaTarea = tareaInput.value.trim();
+            if(!nuevaTarea){ tareaInput.focus(); return; }
+            const nuevaFecha = block.querySelector('.fecha-input').value;
             const confirmada = block.querySelector('.confirmada-input').checked;
-            updateFecha(item.id, newVal, confirmada);
+            const nuevoPorcentaje = block.querySelector('.porcentaje-input').value.trim();
+            updateTareaDetalles(item.id, { tarea: nuevaTarea, fecha: nuevaFecha, confirmada, porcentaje: nuevoPorcentaje });
           });
           block.querySelector('.cancel-fecha').addEventListener('click', () => render());
         });
@@ -610,6 +642,17 @@ async function updateFecha(id, nuevaFecha, confirmada){
   } catch(e){ console.error(e); }
 }
 
+async function updateTareaDetalles(id, { tarea, fecha, confirmada, porcentaje }){
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/tasks?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { ...headers, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ tarea, fecha: fecha || null, confirmada: !!confirmada, porcentaje: porcentaje || null })
+    });
+    loadTasks();
+  } catch(e){ console.error(e); }
+}
+
 async function markDone(id){
   try{
     await fetch(`${SUPABASE_URL}/rest/v1/tasks?id=eq.${id}`, {
@@ -637,14 +680,16 @@ document.getElementById('addBtn').addEventListener('click', () => {
   const fecha = document.getElementById('fFecha').value;
   const descripcion = document.getElementById('fDesc').value.trim();
   const confirmada = document.getElementById('fConfirmada').checked;
+  const porcentaje = document.getElementById('fPorcentaje').value.trim();
   if(!tarea){ document.getElementById('fTarea').focus(); return; }
 
-  addTask({ materia, tarea, fecha, descripcion, confirmada, done:false });
+  addTask({ materia, tarea, fecha, descripcion, confirmada, porcentaje: porcentaje || null, done:false });
 
   document.getElementById('fTarea').value = '';
   document.getElementById('fFecha').value = '';
   document.getElementById('fDesc').value = '';
   document.getElementById('fConfirmada').checked = false;
+  document.getElementById('fPorcentaje').value = '';
   document.getElementById('fTarea').focus();
 });
 
