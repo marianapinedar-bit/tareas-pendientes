@@ -85,7 +85,7 @@
     font-family:'Inter', sans-serif; font-size:0.85rem;
   }
   .composer select option{ background:#161c30; color:var(--text); }
-  .composer textarea{ resize:vertical; min-height:52px; font-family:'Inter', sans-serif; }
+  .composer textarea{ resize:none; min-height:52px; max-height:320px; overflow-y:hidden; font-family:'Inter', sans-serif; }
   .composer input:focus, .composer select:focus, .composer textarea:focus{
     outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(79,140,255,0.18);
   }
@@ -255,22 +255,26 @@
     border-top:1px solid var(--border); padding-top:8px;
   }
   .card .desc.expanded{ max-height:none; }
+  .card .desc a{ color:var(--blue); text-decoration:underline; cursor:pointer; }
+  .card .desc a:hover{ color:var(--violet); }
   .card .desc-toggle{
     display:inline-block; font-family:'JetBrains Mono', monospace; font-size:0.68rem;
     color:var(--violet); cursor:pointer; margin-top:6px;
   }
-  .card .desc-edit-toggle{
+  .card .desc-edit-toggle, .card .desc-copy-toggle{
     display:inline-block; font-family:'JetBrains Mono', monospace; font-size:0.68rem;
     color:var(--text-dim); cursor:pointer; margin-top:6px; margin-left:10px;
   }
   .card .desc-edit-toggle:hover{ color:var(--blue); }
+  .card .desc-copy-toggle:hover{ color:var(--mint); }
   .card .desc-edit-toggle.add-desc{ margin-left:0; }
 
   .edit-desc-panel{ margin-top:6px; }
   .edit-desc-panel textarea{
     width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px;
     background:rgba(255,255,255,0.04); color:var(--text);
-    font-family:'Inter', sans-serif; font-size:0.82rem; resize:vertical; min-height:60px;
+    font-family:'Inter', sans-serif; font-size:0.82rem; resize:none; min-height:60px;
+    max-height:320px; overflow-y:hidden;
     margin-bottom:6px;
   }
   .edit-desc-panel .desc-actions{ display:flex; gap:6px; }
@@ -391,6 +395,29 @@ function escapeHtml(s){
   const d = document.createElement('div');
   d.textContent = s;
   return d.innerHTML;
+}
+
+function linkify(text){
+  const escaped = escapeHtml(text);
+  const urlRegex = /((https?:\/\/|www\.)[^\s<]+)/gi;
+  return escaped.replace(urlRegex, (match) => {
+    let url = match;
+    let trailing = '';
+    const trailingMatch = url.match(/[).,;:!?]+$/);
+    if(trailingMatch){
+      trailing = trailingMatch[0];
+      url = url.slice(0, -trailing.length);
+    }
+    const href = url.toLowerCase().startsWith('http') ? url : 'https://' + url;
+    return `<a href="${href}" target="_blank" rel="noopener">${url}</a>${trailing}`;
+  });
+}
+
+function autoGrow(el, maxHeight = 320){
+  el.style.height = 'auto';
+  const newHeight = Math.min(el.scrollHeight, maxHeight);
+  el.style.height = newHeight + 'px';
+  el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden';
 }
 
 function getUrgency(fecha){
@@ -530,19 +557,31 @@ function render(){
           </div>
           <div class="desc-block">
             ${hasDesc
-              ? `<div class="desc">${escapeHtml(item.descripcion)}</div><span class="desc-toggle">ver más ↓</span><span class="desc-edit-toggle">editar</span>`
+              ? `<div class="desc">${linkify(item.descripcion)}</div><span class="desc-toggle">ver más ↓</span><span class="desc-edit-toggle">editar</span><span class="desc-copy-toggle">⧉ copiar</span>`
               : `<span class="desc-edit-toggle add-desc">+ agregar descripción</span>`}
           </div>`;
 
         if(hasDesc){
           const descEl = card.querySelector('.desc');
           const toggleEl = card.querySelector('.desc-toggle');
+          const copyEl = card.querySelector('.desc-copy-toggle');
           const toggle = () => {
             descEl.classList.toggle('expanded');
             toggleEl.textContent = descEl.classList.contains('expanded') ? 'ver menos ↑' : 'ver más ↓';
           };
-          descEl.addEventListener('click', toggle);
+          descEl.addEventListener('click', (e) => {
+            if(e.target.tagName === 'A') return;
+            toggle();
+          });
           toggleEl.addEventListener('click', toggle);
+          copyEl.addEventListener('click', async () => {
+            try{
+              await navigator.clipboard.writeText(item.descripcion);
+              const original = copyEl.textContent;
+              copyEl.textContent = '✓ copiado';
+              setTimeout(() => { copyEl.textContent = original; }, 1200);
+            }catch(err){ console.error(err); }
+          });
         }
 
         card.querySelector('.desc-edit-toggle').addEventListener('click', () => {
@@ -556,6 +595,9 @@ function render(){
                 <button class="cancel-desc">Cancelar</button>
               </div>
             </div>`;
+          const descInput = block.querySelector('.desc-input');
+          autoGrow(descInput);
+          descInput.addEventListener('input', () => autoGrow(descInput));
           block.querySelector('.save-desc').addEventListener('click', () => {
             const newVal = block.querySelector('.desc-input').value.trim();
             updateDescripcion(item.id, newVal);
@@ -704,7 +746,11 @@ document.getElementById('addBtn').addEventListener('click', () => {
   document.getElementById('fConfirmada').checked = false;
   document.getElementById('fPorcentaje').value = '';
   document.getElementById('fTarea').focus();
+  autoGrow(document.getElementById('fDesc'));
 });
+
+const fDescEl = document.getElementById('fDesc');
+fDescEl.addEventListener('input', () => autoGrow(fDescEl));
 
 populateMateriaSelect();
 loadTasks();
