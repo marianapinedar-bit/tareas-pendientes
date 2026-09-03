@@ -121,6 +121,11 @@
     background:linear-gradient(90deg, rgba(79,140,255,0.22), rgba(159,123,255,0.22));
     border-color:rgba(159,123,255,0.5); color:var(--text);
   }
+  .filter-chip-all{
+    font-weight:600;
+    margin-right:6px; padding-right:14px;
+    border-right:1px solid var(--border);
+  }
 
   .status-line{
     margin:0 0 20px;
@@ -506,17 +511,34 @@ function renderAlerts(pending){
   }).join('');
 }
 
+function saveActiveMaterias(){
+  try{ localStorage.setItem('activeMaterias', JSON.stringify([...activeMaterias])); }catch(e){}
+}
+
 function renderFilterBar(){
   const el = document.getElementById('filterBar');
-  el.innerHTML = MATERIAS.map(m =>
-    `<button type="button" class="filter-chip${activeMaterias.has(m.nombre) ? ' active' : ''}" data-materia="${escapeHtml(m.nombre)}">${escapeHtml(m.nombre)}</button>`
-  ).join('');
-  el.querySelectorAll('.filter-chip').forEach(btn => {
+  const allActive = activeMaterias.size === MATERIAS.length;
+  el.innerHTML = `<button type="button" class="filter-chip filter-chip-all${allActive ? ' active' : ''}" data-all="1">Todas</button>` +
+    MATERIAS.map(m =>
+      `<button type="button" class="filter-chip${activeMaterias.has(m.nombre) ? ' active' : ''}" data-materia="${escapeHtml(m.nombre)}">${escapeHtml(m.nombre)}</button>`
+    ).join('');
+
+  el.querySelector('.filter-chip-all').addEventListener('click', () => {
+    activeMaterias = new Set(MATERIAS.map(m => m.nombre));
+    saveActiveMaterias();
+    render();
+  });
+
+  el.querySelectorAll('.filter-chip[data-materia]').forEach(btn => {
     btn.addEventListener('click', () => {
       const nombre = btn.dataset.materia;
-      if(activeMaterias.has(nombre)) activeMaterias.delete(nombre);
-      else activeMaterias.add(nombre);
-      try{ localStorage.setItem('activeMaterias', JSON.stringify([...activeMaterias])); }catch(e){}
+      const isSoleActive = activeMaterias.size === 1 && activeMaterias.has(nombre);
+      if(isSoleActive){
+        activeMaterias = new Set(MATERIAS.map(m => m.nombre));
+      } else {
+        activeMaterias = new Set([nombre]);
+      }
+      saveActiveMaterias();
       render();
     });
   });
