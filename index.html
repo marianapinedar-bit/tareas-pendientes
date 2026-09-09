@@ -551,6 +551,13 @@ function formatFecha(fecha){
          d.toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' });
 }
 
+function getCalendarUrgency(fecha){
+  const diffHours = (new Date(fecha) - new Date()) / 3600000;
+  if(diffHours < 0) return 'overdue';
+  if(diffHours <= 24 * 7) return 'soon';
+  return 'normal';
+}
+
 function sameDay(a, b){
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
@@ -610,7 +617,7 @@ function renderCalendar(withDate){
     let dot = '';
     if(dayTasks.length){
       const rank = { overdue: 0, soon: 1, normal: 2 };
-      const worst = dayTasks.map(t => getUrgency(t.fecha)).sort((a, b) => rank[a] - rank[b])[0];
+      const worst = dayTasks.map(t => getCalendarUrgency(t.fecha)).sort((a, b) => rank[a] - rank[b])[0];
       const color = worst === 'overdue' ? 'var(--rust)' : worst === 'soon' ? 'var(--amber)' : 'var(--blue)';
       dot = `<span class="cal-dot" style="background:${color}"></span>`;
     }
