@@ -135,7 +135,7 @@
 
   .board{ display:flex; flex-direction:column; gap:18px; }
 
-  .sidebar{ position:sticky; top:24px; display:flex; flex-direction:column; gap:14px; }
+  .sidebar{ display:flex; flex-direction:column; gap:14px; }
   .sidebar .panel{
     background:var(--surface); backdrop-filter:blur(14px);
     border:1px solid var(--border); border-radius:16px; padding:16px;
@@ -172,6 +172,54 @@
   .alert-item.al-soon .a-when{ color:var(--amber); }
   .alert-item.al-normal .a-when{ color:var(--text-dim); }
   .sidebar .empty{ font-size:0.78rem; color:var(--text-dim); opacity:0.6; font-style:italic; }
+
+  .cal-nav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .cal-month{ font-family:'Sora', sans-serif; font-weight:600; font-size:0.8rem; text-transform:capitalize; }
+  .cal-btn{
+    width:24px; height:24px; border-radius:7px; border:1px solid var(--border);
+    background:rgba(255,255,255,0.03); color:var(--text-dim); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:0.75rem;
+    transition:background 0.15s ease, color 0.15s ease;
+  }
+  .cal-btn:hover{ background:var(--surface-hover); color:var(--text); }
+  .cal-grid{
+    display:grid; grid-template-columns:repeat(7,1fr); gap:3px;
+    font-family:'JetBrains Mono', monospace;
+  }
+  .cal-dow{
+    text-align:center; font-size:0.6rem; color:var(--text-dim); letter-spacing:0.03em;
+    padding-bottom:4px;
+  }
+  .cal-day{
+    position:relative; aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+    font-size:0.7rem; color:var(--text); border-radius:8px; cursor:pointer;
+    border:1px solid transparent; background:rgba(255,255,255,0.02);
+    transition:background 0.15s ease, border-color 0.15s ease;
+  }
+  .cal-day:hover{ background:var(--surface-hover); }
+  .cal-day.empty{ visibility:hidden; cursor:default; }
+  .cal-day.today{ border-color:rgba(159,123,255,0.55); color:var(--violet); font-weight:600; }
+  .cal-day.selected{
+    background:linear-gradient(135deg, rgba(79,140,255,0.3), rgba(159,123,255,0.3));
+    border-color:rgba(159,123,255,0.6); color:#fff;
+  }
+  .cal-dot{
+    position:absolute; bottom:4px; width:4px; height:4px; border-radius:50%;
+  }
+  .cal-legend{
+    display:flex; gap:12px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);
+    font-family:'JetBrains Mono', monospace; font-size:0.6rem; color:var(--text-dim);
+  }
+  .cal-legend span{ display:inline-flex; align-items:center; gap:4px; }
+  .cal-legend i{ width:6px; height:6px; border-radius:50%; display:inline-block; }
+  .cal-filter-note{
+    margin-top:10px; font-family:'JetBrains Mono', monospace; font-size:0.66rem; color:var(--text-dim);
+    display:flex; align-items:center; justify-content:space-between; gap:6px;
+  }
+  .cal-filter-note button{
+    font-family:'JetBrains Mono', monospace; font-size:0.62rem; color:var(--violet);
+    background:none; border:none; cursor:pointer; text-decoration:underline;
+  }
 
   .column{
     background:var(--surface); backdrop-filter:blur(14px);
@@ -384,6 +432,24 @@
 
     <aside class="sidebar">
       <div class="panel">
+        <h3>📅 Calendario</h3>
+        <div class="cal-nav">
+          <button type="button" class="cal-btn" id="calPrev">‹</button>
+          <div class="cal-month" id="calMonth"></div>
+          <button type="button" class="cal-btn" id="calNext">›</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="cal-legend">
+          <span><i style="background:var(--rust)"></i>vencida</span>
+          <span><i style="background:var(--amber)"></i>próxima</span>
+          <span><i style="background:var(--blue)"></i>en curso</span>
+        </div>
+        <div class="cal-filter-note" id="calNote" hidden>
+          <span id="calNoteText"></span>
+          <button type="button" id="calClear">quitar</button>
+        </div>
+      </div>
+      <div class="panel">
         <h3>⚡ Alertas</h3>
         <div class="alert-list" id="alertList"></div>
       </div>
@@ -404,6 +470,8 @@ let tasks = [];
 let refreshTimer = null;
 
 let activeMaterias = new Set(MATERIAS.map(m => m.nombre));
+let calCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let selectedDay = null;
 try{
   const saved = JSON.parse(localStorage.getItem('activeMaterias') || 'null');
   if(Array.isArray(saved) && saved.length){
@@ -483,14 +551,22 @@ function formatFecha(fecha){
          d.toLocaleTimeString('es-CO', { hour:'2-digit', minute:'2-digit' });
 }
 
+function sameDay(a, b){
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
 function renderAlerts(pending){
   const el = document.getElementById('alertList');
-  const withDate = pending
+  let withDate = pending
     .filter(t => t.fecha)
     .sort((a, b) => a.fecha.localeCompare(b.fecha));
 
+  if(selectedDay){
+    withDate = withDate.filter(t => sameDay(new Date(t.fecha), selectedDay));
+  }
+
   if(withDate.length === 0){
-    el.innerHTML = '<div class="empty">nada urgente por ahora</div>';
+    el.innerHTML = `<div class="empty">${selectedDay ? 'nada ese día' : 'nada urgente por ahora'}</div>`;
     return;
   }
 
@@ -509,6 +585,55 @@ function renderAlerts(pending){
         <div class="a-when">${formatCountdown(t.fecha)} ${confirmTag}</div>
       </div>`;
   }).join('');
+}
+
+function renderCalendar(withDate){
+  const monthLabel = document.getElementById('calMonth');
+  monthLabel.textContent = calCursor.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
+
+  const grid = document.getElementById('calGrid');
+  const dows = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+  let html = dows.map(d => `<div class="cal-dow">${d}</div>`).join('');
+
+  const firstOfMonth = new Date(calCursor.getFullYear(), calCursor.getMonth(), 1);
+  const startOffset = (firstOfMonth.getDay() + 6) % 7; // lunes = 0
+  const daysInMonth = new Date(calCursor.getFullYear(), calCursor.getMonth() + 1, 0).getDate();
+  const today = new Date();
+
+  for(let i = 0; i < startOffset; i++) html += `<div class="cal-day empty"></div>`;
+
+  for(let day = 1; day <= daysInMonth; day++){
+    const date = new Date(calCursor.getFullYear(), calCursor.getMonth(), day);
+    const dayTasks = withDate.filter(t => sameDay(new Date(t.fecha), date));
+    const isToday = sameDay(date, today);
+    const isSelected = selectedDay && sameDay(date, selectedDay);
+    let dot = '';
+    if(dayTasks.length){
+      const rank = { overdue: 0, soon: 1, normal: 2 };
+      const worst = dayTasks.map(t => getUrgency(t.fecha)).sort((a, b) => rank[a] - rank[b])[0];
+      const color = worst === 'overdue' ? 'var(--rust)' : worst === 'soon' ? 'var(--amber)' : 'var(--blue)';
+      dot = `<span class="cal-dot" style="background:${color}"></span>`;
+    }
+    html += `<div class="cal-day${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}" data-date="${date.toISOString()}">${day}${dot}</div>`;
+  }
+  grid.innerHTML = html;
+
+  grid.querySelectorAll('.cal-day[data-date]').forEach(el => {
+    el.addEventListener('click', () => {
+      const date = new Date(el.dataset.date);
+      selectedDay = (selectedDay && sameDay(selectedDay, date)) ? null : date;
+      render();
+    });
+  });
+
+  const note = document.getElementById('calNote');
+  const noteText = document.getElementById('calNoteText');
+  if(selectedDay){
+    note.hidden = false;
+    noteText.textContent = 'filtrando: ' + selectedDay.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' });
+  } else {
+    note.hidden = true;
+  }
 }
 
 function saveActiveMaterias(){
@@ -573,6 +698,7 @@ function render(){
   const pending = tasks.filter(t => !t.done && activeMaterias.has(t.materia));
   statusEl.textContent = pending.length + ' tarea' + (pending.length === 1 ? '' : 's') + ' pendiente' + (pending.length === 1 ? '' : 's') + ' en total';
 
+  renderCalendar(pending.filter(t => t.fecha));
   renderAlerts(pending);
 
   MATERIAS.filter(m => activeMaterias.has(m.nombre)).forEach(materia => {
@@ -831,6 +957,19 @@ document.getElementById('addBtn').addEventListener('click', () => {
 
 const fDescEl = document.getElementById('fDesc');
 fDescEl.addEventListener('input', () => autoGrow(fDescEl));
+
+document.getElementById('calPrev').addEventListener('click', () => {
+  calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() - 1, 1);
+  render();
+});
+document.getElementById('calNext').addEventListener('click', () => {
+  calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() + 1, 1);
+  render();
+});
+document.getElementById('calClear').addEventListener('click', () => {
+  selectedDay = null;
+  render();
+});
 
 populateMateriaSelect();
 loadTasks();
