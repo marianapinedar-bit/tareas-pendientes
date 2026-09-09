@@ -708,9 +708,21 @@ function render(){
   renderCalendar(pending.filter(t => t.fecha));
   renderAlerts(pending);
 
-  MATERIAS.filter(m => activeMaterias.has(m.nombre)).forEach(materia => {
+  let materiasToShow = MATERIAS.filter(m => activeMaterias.has(m.nombre));
+  if(selectedDay){
+    materiasToShow = materiasToShow.filter(m =>
+      pending.some(t => t.materia === m.nombre && t.fecha && sameDay(new Date(t.fecha), selectedDay))
+    );
+  }
+
+  if(selectedDay && materiasToShow.length === 0){
+    board.innerHTML = '<div class="empty">no hay tareas pendientes ese día</div>';
+  }
+
+  materiasToShow.forEach(materia => {
     const items = pending
       .filter(t => t.materia === materia.nombre)
+      .filter(t => !selectedDay || (t.fecha && sameDay(new Date(t.fecha), selectedDay)))
       .sort((a, b) => {
         if(!a.fecha && !b.fecha) return 0;
         if(!a.fecha) return 1;
