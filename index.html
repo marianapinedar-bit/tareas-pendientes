@@ -530,13 +530,27 @@ function renderFilterBar(){
   });
 
   el.querySelectorAll('.filter-chip[data-materia]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
       const nombre = btn.dataset.materia;
-      const isSoleActive = activeMaterias.size === 1 && activeMaterias.has(nombre);
-      if(isSoleActive){
-        activeMaterias = new Set(MATERIAS.map(m => m.nombre));
+      if(e.shiftKey){
+        const allActiveNow = activeMaterias.size === MATERIAS.length;
+        if(allActiveNow){
+          activeMaterias = new Set([nombre]);
+        } else if(activeMaterias.has(nombre)){
+          activeMaterias.delete(nombre);
+          if(activeMaterias.size === 0){
+            activeMaterias = new Set(MATERIAS.map(m => m.nombre));
+          }
+        } else {
+          activeMaterias.add(nombre);
+        }
       } else {
-        activeMaterias = new Set([nombre]);
+        const isSoleActive = activeMaterias.size === 1 && activeMaterias.has(nombre);
+        if(isSoleActive){
+          activeMaterias = new Set(MATERIAS.map(m => m.nombre));
+        } else {
+          activeMaterias = new Set([nombre]);
+        }
       }
       saveActiveMaterias();
       render();
