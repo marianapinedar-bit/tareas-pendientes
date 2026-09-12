@@ -261,11 +261,27 @@
   }
   .note-item .note-bullet{ color:var(--violet); flex-shrink:0; }
   .note-item .note-text{ flex:1; white-space:pre-wrap; word-break:break-word; }
-  .note-item .note-del{
+  .note-item .note-actions{ display:flex; gap:4px; flex-shrink:0; }
+  .note-item .note-edit, .note-item .note-del{
     border:none; background:none; color:var(--text-dim); cursor:pointer;
-    font-size:0.8rem; flex-shrink:0; line-height:1.4;
+    font-size:0.78rem; flex-shrink:0; line-height:1.4;
   }
+  .note-item .note-edit:hover{ color:var(--blue); }
   .note-item .note-del:hover{ color:var(--rust); }
+  .note-edit-panel{ display:flex; flex-direction:column; gap:6px; flex:1; }
+  .note-edit-panel textarea{
+    width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:7px;
+    background:rgba(255,255,255,0.04); color:var(--text);
+    font-family:'Inter', sans-serif; font-size:0.78rem; resize:none; min-height:44px;
+    max-height:200px; overflow-y:hidden;
+  }
+  .note-edit-panel .note-edit-actions{ display:flex; gap:6px; }
+  .note-edit-panel button{
+    border:none; border-radius:6px; padding:4px 8px; cursor:pointer;
+    font-family:'Sora', sans-serif; font-size:0.68rem; font-weight:600;
+  }
+  .note-edit-panel .save-note{ background:var(--blue); color:#fff; }
+  .note-edit-panel .cancel-note{ background:rgba(255,255,255,0.06); color:var(--text-dim); }
   .note-add-row{ display:flex; gap:6px; }
   .note-add-row input{
     flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:9px;
@@ -951,19 +967,46 @@ function renderNotas(){
   if(notas.length === 0){
     el.innerHTML = '<div class="empty">sin notas todavía</div>';
     badge.hidden = true;
-  } else {
-    el.innerHTML = notas.map(n => `
-      <div class="note-item">
-        <span class="note-bullet">•</span>
-        <span class="note-text">${linkify(n.texto)}</span>
-        <button type="button" class="note-del" data-id="${n.id}" title="Eliminar">✕</button>
-      </div>`).join('');
-    el.querySelectorAll('.note-del').forEach(btn => {
-      btn.addEventListener('click', () => deleteNota(btn.dataset.id));
-    });
-    badge.hidden = false;
-    badge.textContent = notas.length;
+    return;
   }
+
+  el.innerHTML = notas.map(n => `
+    <div class="note-item" data-id="${n.id}">
+      <span class="note-bullet">•</span>
+      <span class="note-text">${linkify(n.texto)}</span>
+      <div class="note-actions">
+        <button type="button" class="note-edit" title="Editar">✎</button>
+        <button type="button" class="note-del" title="Eliminar">✕</button>
+      </div>
+    </div>`).join('');
+  badge.hidden = false;
+  badge.textContent = notas.length;
+
+  el.querySelectorAll('.note-item').forEach(itemEl => {
+    const id = itemEl.dataset.id;
+    const nota = notas.find(n => String(n.id) === id);
+    itemEl.querySelector('.note-del').addEventListener('click', () => deleteNota(id));
+    itemEl.querySelector('.note-edit').addEventListener('click', () => {
+      itemEl.innerHTML = `
+        <div class="note-edit-panel">
+          <textarea class="note-edit-input">${escapeHtml(nota.texto)}</textarea>
+          <div class="note-edit-actions">
+            <button type="button" class="save-note">Guardar</button>
+            <button type="button" class="cancel-note">Cancelar</button>
+          </div>
+        </div>`;
+      const textarea = itemEl.querySelector('.note-edit-input');
+      autoGrow(textarea, 200);
+      textarea.addEventListener('input', () => autoGrow(textarea, 200));
+      textarea.focus();
+      itemEl.querySelector('.save-note').addEventListener('click', () => {
+        const val = textarea.value.trim();
+        if(!val) return;
+        updateNota(id, val);
+      });
+      itemEl.querySelector('.cancel-note').addEventListener('click', () => renderNotas());
+    });
+  });
 }
 
 async function loadNotas(){
@@ -983,6 +1026,17 @@ async function addNota(texto){
   try{
     await fetch(`${SUPABASE_URL}/rest/v1/notas`, {
       method: 'POST',
+      headers: { ...headers, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ texto })
+    });
+    loadNotas();
+  } catch(e){ console.error(e); }
+}
+
+async function updateNota(id, texto){
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/notas?id=eq.${id}`, {
+      method: 'PATCH',
       headers: { ...headers, 'Prefer': 'return=minimal' },
       body: JSON.stringify({ texto })
     });
