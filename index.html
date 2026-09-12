@@ -136,6 +136,31 @@
   .board{ display:flex; flex-direction:column; gap:18px; }
 
   .sidebar{ display:flex; flex-direction:column; gap:14px; }
+
+  .panel-tabs{
+    display:flex; gap:4px; margin-bottom:14px;
+    background:rgba(255,255,255,0.03); border:1px solid var(--border);
+    border-radius:10px; padding:4px;
+  }
+  .tab-btn{
+    flex:1; border:none; background:none; color:var(--text-dim); cursor:pointer;
+    font-family:'Sora', sans-serif; font-weight:600; font-size:0.76rem;
+    padding:8px 6px; border-radius:8px;
+    transition:background 0.15s ease, color 0.15s ease;
+  }
+  .tab-btn:hover{ color:var(--text); }
+  .tab-btn.active{
+    background:linear-gradient(90deg, rgba(79,140,255,0.22), rgba(159,123,255,0.22));
+    color:var(--text);
+  }
+  .tab-content[hidden]{ display:none; }
+  .tab-badge{
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:16px; height:16px; padding:0 4px; margin-left:5px;
+    border-radius:999px; background:var(--violet); color:#fff;
+    font-family:'JetBrains Mono', monospace; font-size:0.6rem; font-weight:600;
+    vertical-align:middle;
+  }
   .sidebar .panel{
     background:var(--surface); backdrop-filter:blur(14px);
     border:1px solid var(--border); border-radius:16px; padding:16px;
@@ -207,7 +232,7 @@
     position:absolute; bottom:4px; width:4px; height:4px; border-radius:50%;
   }
   .cal-legend{
-    display:flex; gap:12px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);
+    display:flex; flex-wrap:wrap; gap:8px 12px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border);
     font-family:'JetBrains Mono', monospace; font-size:0.6rem; color:var(--text-dim);
   }
   .cal-legend span{ display:inline-flex; align-items:center; gap:4px; }
@@ -219,6 +244,41 @@
   .cal-filter-note button{
     font-family:'JetBrains Mono', monospace; font-size:0.62rem; color:var(--violet);
     background:none; border:none; cursor:pointer; text-decoration:underline;
+  }
+
+  .notes-list{
+    display:flex; flex-direction:column; gap:6px;
+    max-height:260px; overflow-y:auto; padding-right:4px; margin-bottom:10px;
+    scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.14) transparent;
+  }
+  .notes-list::-webkit-scrollbar{ width:6px; }
+  .notes-list::-webkit-scrollbar-track{ background:transparent; }
+  .notes-list::-webkit-scrollbar-thumb{ background:rgba(255,255,255,0.14); border-radius:999px; }
+  .note-item{
+    display:flex; align-items:flex-start; gap:6px;
+    font-size:0.78rem; line-height:1.4; padding:7px 9px; border-radius:9px;
+    border:1px solid var(--border); background:rgba(255,255,255,0.03);
+  }
+  .note-item .note-bullet{ color:var(--violet); flex-shrink:0; }
+  .note-item .note-text{ flex:1; white-space:pre-wrap; word-break:break-word; }
+  .note-item .note-del{
+    border:none; background:none; color:var(--text-dim); cursor:pointer;
+    font-size:0.8rem; flex-shrink:0; line-height:1.4;
+  }
+  .note-item .note-del:hover{ color:var(--rust); }
+  .note-add-row{ display:flex; gap:6px; }
+  .note-add-row input{
+    flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:9px;
+    background:rgba(255,255,255,0.03); color:var(--text);
+    font-family:'Inter', sans-serif; font-size:0.8rem;
+  }
+  .note-add-row input:focus{
+    outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(79,140,255,0.18);
+  }
+  .note-add-row button{
+    border:none; border-radius:9px; padding:0 14px; cursor:pointer;
+    background:linear-gradient(90deg, var(--blue), var(--violet));
+    color:#fff; font-family:'Sora', sans-serif; font-weight:600; font-size:0.95rem;
   }
 
   .column{
@@ -432,21 +492,33 @@
 
     <aside class="sidebar">
       <div class="panel">
-        <h3>📅 Calendario</h3>
-        <div class="cal-nav">
-          <button type="button" class="cal-btn" id="calPrev">‹</button>
-          <div class="cal-month" id="calMonth"></div>
-          <button type="button" class="cal-btn" id="calNext">›</button>
+        <div class="panel-tabs">
+          <button type="button" class="tab-btn active" data-target="tabCal">📅 Calendario</button>
+          <button type="button" class="tab-btn" data-target="tabNotas">📝 Notas<span class="tab-badge" id="notasBadge" hidden>0</span></button>
         </div>
-        <div class="cal-grid" id="calGrid"></div>
-        <div class="cal-legend">
-          <span><i style="background:var(--rust)"></i>vencida</span>
-          <span><i style="background:var(--amber)"></i>próxima</span>
-          <span><i style="background:var(--blue)"></i>en curso</span>
+        <div class="tab-content" id="tabCal">
+          <div class="cal-nav">
+            <button type="button" class="cal-btn" id="calPrev">‹</button>
+            <div class="cal-month" id="calMonth"></div>
+            <button type="button" class="cal-btn" id="calNext">›</button>
+          </div>
+          <div class="cal-grid" id="calGrid"></div>
+          <div class="cal-legend">
+            <span><i style="background:var(--rust)"></i>vencida</span>
+            <span><i style="background:var(--amber)"></i>próxima</span>
+            <span><i style="background:var(--blue)"></i>en curso</span>
+          </div>
+          <div class="cal-filter-note" id="calNote" hidden>
+            <span id="calNoteText"></span>
+            <button type="button" id="calClear">quitar</button>
+          </div>
         </div>
-        <div class="cal-filter-note" id="calNote" hidden>
-          <span id="calNoteText"></span>
-          <button type="button" id="calClear">quitar</button>
+        <div class="tab-content" id="tabNotas" hidden>
+          <div class="notes-list" id="notesList"></div>
+          <div class="note-add-row">
+            <input type="text" id="fNota" placeholder="Ej: El domingo revisamos X...">
+            <button type="button" id="addNotaBtn">+</button>
+          </div>
         </div>
       </div>
       <div class="panel">
@@ -467,6 +539,7 @@ const MATERIAS = [
 ];
 
 let tasks = [];
+let notas = [];
 let refreshTimer = null;
 
 let activeMaterias = new Set(MATERIAS.map(m => m.nombre));
@@ -872,6 +945,61 @@ function render(){
   });
 }
 
+function renderNotas(){
+  const el = document.getElementById('notesList');
+  const badge = document.getElementById('notasBadge');
+  if(notas.length === 0){
+    el.innerHTML = '<div class="empty">sin notas todavía</div>';
+    badge.hidden = true;
+  } else {
+    el.innerHTML = notas.map(n => `
+      <div class="note-item">
+        <span class="note-bullet">•</span>
+        <span class="note-text">${linkify(n.texto)}</span>
+        <button type="button" class="note-del" data-id="${n.id}" title="Eliminar">✕</button>
+      </div>`).join('');
+    el.querySelectorAll('.note-del').forEach(btn => {
+      btn.addEventListener('click', () => deleteNota(btn.dataset.id));
+    });
+    badge.hidden = false;
+    badge.textContent = notas.length;
+  }
+}
+
+async function loadNotas(){
+  try{
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/notas?select=*&order=created_at.asc`, { headers });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const current = JSON.stringify(notas);
+    if(JSON.stringify(data) !== current){
+      notas = data;
+      renderNotas();
+    }
+  } catch(e){ console.error(e); }
+}
+
+async function addNota(texto){
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/notas`, {
+      method: 'POST',
+      headers: { ...headers, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ texto })
+    });
+    loadNotas();
+  } catch(e){ console.error(e); }
+}
+
+async function deleteNota(id){
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/notas?id=eq.${id}`, {
+      method: 'DELETE',
+      headers
+    });
+    loadNotas();
+  } catch(e){ console.error(e); }
+}
+
 async function loadTasks(){
   try{
     const res = await fetch(`${SUPABASE_URL}/rest/v1/tasks?select=*&order=created_at.asc`, { headers });
@@ -990,10 +1118,34 @@ document.getElementById('calClear').addEventListener('click', () => {
   render();
 });
 
+document.getElementById('addNotaBtn').addEventListener('click', () => {
+  const input = document.getElementById('fNota');
+  const texto = input.value.trim();
+  if(!texto) return;
+  addNota(texto);
+  input.value = '';
+});
+document.getElementById('fNota').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    document.getElementById('addNotaBtn').click();
+  }
+});
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.hidden = true);
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.target).hidden = false;
+  });
+});
+
 populateMateriaSelect();
 loadTasks();
+loadNotas();
 render();
-refreshTimer = setInterval(loadTasks, 8000);
+refreshTimer = setInterval(() => { loadTasks(); loadNotas(); }, 8000);
 setInterval(render, 60000); // actualiza los contadores de "faltan Xd Xh" cada minuto
 </script>
 </body>
