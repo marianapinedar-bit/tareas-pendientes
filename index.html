@@ -688,11 +688,11 @@ function renderCalendar(withDate){
   monthLabel.textContent = calCursor.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
 
   const grid = document.getElementById('calGrid');
-  const dows = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+  const dows = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
   let html = dows.map(d => `<div class="cal-dow">${d}</div>`).join('');
 
   const firstOfMonth = new Date(calCursor.getFullYear(), calCursor.getMonth(), 1);
-  const startOffset = (firstOfMonth.getDay() + 6) % 7; // lunes = 0
+  const startOffset = firstOfMonth.getDay(); // domingo = 0
   const daysInMonth = new Date(calCursor.getFullYear(), calCursor.getMonth() + 1, 0).getDate();
   const today = new Date();
 
